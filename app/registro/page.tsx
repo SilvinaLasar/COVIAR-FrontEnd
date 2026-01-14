@@ -27,6 +27,7 @@ export default function RegistroPage() {
   const [adminLastName, setAdminLastName] = useState("")
   const [adminRole, setAdminRole] = useState("")
   const [adminPhone, setAdminPhone] = useState("")
+  const [adminMail, setAdminMail] = useState("")
 
   // Winery data
   const [email, setEmail] = useState("")
@@ -76,8 +77,9 @@ export default function RegistroPage() {
           data: {
             admin_first_name: adminFirstName,
             admin_last_name: adminLastName,
-            admin_role: adminRole,
+            admin_mail: adminMail,
             admin_phone: adminPhone,
+            admin_role: adminRole,
             razon_social: razonSocial,
             nombre_fantasia: nombreFantasia,
             cuit,
@@ -144,10 +146,6 @@ export default function RegistroPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="admin-role">Rol</Label>
-                  <Input id="admin-role" value={adminRole} onChange={(e) => setAdminRole(e.target.value)} />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="admin-phone">Celular</Label>
                   <Input
                     id="admin-phone"
@@ -155,6 +153,20 @@ export default function RegistroPage() {
                     value={adminPhone}
                     onChange={(e) => setAdminPhone(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-mail">Email *</Label>
+                  <Input
+                    id="admin-mail"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-role">Rol</Label>
+                  <Input id="admin-role" value={adminRole} onChange={(e) => setAdminRole(e.target.value)} />
                 </div>
               </div>
             </div>

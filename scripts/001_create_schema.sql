@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   admin_last_name TEXT NOT NULL,
   admin_role TEXT,
   admin_phone TEXT,
+  admin_mail TEXT not null,
   -- Winery/vineyard data
   razon_social TEXT NOT NULL,
   nombre_fantasia TEXT,
