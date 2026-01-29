@@ -106,6 +106,19 @@ export interface Autoevaluacion {
   respuestas: Record<string, unknown>
 }
 
+export interface AutoevaluacionCreada {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  estado: string
+  id_bodega: number
+  id_version: number
+}
+
+export interface RespuestaIndicador {
+  id_indicador: number
+  id_nivel_respuesta: number
+}
+
 export interface CrearAutoevaluacionRequest {
   respuestas: Record<string, unknown>
 }
@@ -143,6 +156,14 @@ export interface IndicadorEstructura {
 export interface CapituloEstructura {
   capitulo: Capitulo
   indicadores: IndicadorEstructura[]
+}
+
+export interface Segmento {
+  id_segmento: number
+  nombre: string
+  min_turistas: number
+  max_turistas: number
+  id_version: number
 }
 
 export interface EstructuraAutoevaluacionResponse {
