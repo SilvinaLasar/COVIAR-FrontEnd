@@ -41,6 +41,7 @@ export default function AutoevaluacionPage() {
   // Estado para segmentos - Empezamos seleccionando segmento por defecto
   const [isSelectingSegment, setIsSelectingSegment] = useState(true)
   const [segmentos, setSegmentos] = useState<Segmento[]>([])
+  const [selectedSegment, setSelectedSegment] = useState<Segmento | null>(null)
   const [loadingSegmentos, setLoadingSegmentos] = useState(false)
 
   // Obtener usuario y ID de autoevaluación
@@ -224,6 +225,9 @@ export default function AutoevaluacionPage() {
     try {
       await seleccionarSegmento(assessmentId, segmento.id_segmento)
 
+      // Actualizar estado del segmento seleccionado
+      setSelectedSegment(segmento)
+
       // Cargar estructura después de seleccionar segmento
       const response = await obtenerEstructuraAutoevaluacion(assessmentId)
       setEstructura(response.capitulos)
@@ -357,7 +361,57 @@ export default function AutoevaluacionPage() {
       </div>
 
       {/* Right content area */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 space-y-6">
+        {/* Progress Dashboard */}
+        {!isSelectingSegment && estructura.length > 0 && (
+          <div className="bg-zinc-900 text-white p-4 rounded-lg shadow-md flex items-center justify-between gap-6">
+            <div className="flex gap-8">
+              <div>
+                <div className="text-xs text-zinc-400 uppercase font-semibold">Categoría</div>
+                <div className="font-bold text-lg leading-tight">
+                  {selectedSegment?.nombre.split(' ')[0] || "General"}
+                </div>
+              </div>
+
+              <div className="border-l border-zinc-700 pl-6">
+                <div className="text-xs text-zinc-400 uppercase font-semibold">Indicadores a evaluar</div>
+                <div className="font-bold text-lg leading-tight">
+                  {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0)}
+                </div>
+              </div>
+
+              <div className="border-l border-zinc-700 pl-6">
+                <div className="text-xs text-zinc-400 uppercase font-semibold">Puntuación máxima</div>
+                <div className="font-bold text-lg leading-tight">
+                  {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
+                    const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
+                    return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
+                  }, 0), 0)} puntos
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 max-w-xl">
+              <div className="text-xs text-zinc-400 mb-2">Progreso general</div>
+              <div className="h-2 w-full bg-zinc-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-400 to-yellow-400"
+                  style={{ width: `${(Object.keys(responses).length / Math.max(1, estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0))) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                <span>
+                  {Object.keys(responses).length} de {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0)} evaluados • {Object.values(responses).reduce((a, b) => a + b, 0)} / {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
+                    const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
+                    return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
+                  }, 0), 0)} puntos
+                </span>
+                <span>{Math.round((Object.keys(responses).length / Math.max(1, estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0))) * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             {isSelectingSegment ? (
@@ -485,6 +539,6 @@ export default function AutoevaluacionPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   )
 }
