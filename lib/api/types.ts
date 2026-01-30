@@ -106,8 +106,68 @@ export interface Autoevaluacion {
   respuestas: Record<string, unknown>
 }
 
+export interface AutoevaluacionCreada {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  estado: string
+  id_bodega: number
+  id_version: number
+}
+
+export interface RespuestaIndicador {
+  id_indicador: number
+  id_nivel_respuesta: number
+}
+
 export interface CrearAutoevaluacionRequest {
   respuestas: Record<string, unknown>
+}
+
+// ============= ESTRUCTURA AUTOEVALUACIÓN =============
+
+export interface Capitulo {
+  id_capitulo: number
+  id_version: number
+  nombre: string
+  descripcion?: string
+}
+
+export interface Indicador {
+  id_indicador: number
+  id_capitulo: number
+  nombre: string
+  descripcion: string
+}
+
+export interface NivelRespuesta {
+  id_nivel_respuesta: number
+  id_indicador: number
+  nombre: string
+  puntos: number
+  descripcion?: string
+}
+
+export interface IndicadorEstructura {
+  indicador: Indicador
+  niveles_respuesta: NivelRespuesta[]
+  habilitado: boolean
+}
+
+export interface CapituloEstructura {
+  capitulo: Capitulo
+  indicadores: IndicadorEstructura[]
+}
+
+export interface Segmento {
+  id_segmento: number
+  nombre: string
+  min_turistas: number
+  max_turistas: number
+  id_version: number
+}
+
+export interface EstructuraAutoevaluacionResponse {
+  capitulos: CapituloEstructura[]
 }
 
 // ============= CONFIGURACIÓN =============
