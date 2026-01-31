@@ -1,6 +1,6 @@
 // lib/api/autoevaluacion.ts
 
-import type { EstructuraAutoevaluacionResponse, Segmento, AutoevaluacionCreada, RespuestaIndicador } from './types'
+import type { EstructuraAutoevaluacionResponse, Segmento, CrearAutoevaluacionResponse, RespuestaIndicador } from './types'
 
 /**
  * Servicios de API para autoevaluaciones
@@ -22,10 +22,19 @@ function getAuthHeaders(): HeadersInit {
 }
 
 /**
- * Crea una nueva autoevaluación para una bodega
- * @param idBodega - ID de la bodega
+ * Respuesta extendida de crearAutoevaluacion que incluye el status HTTP
  */
-export async function crearAutoevaluacion(idBodega: number): Promise<AutoevaluacionCreada> {
+export interface CrearAutoevaluacionResult {
+    httpStatus: number
+    data: CrearAutoevaluacionResponse
+}
+
+/**
+ * Crea una nueva autoevaluación para una bodega o retorna la pendiente
+ * @param idBodega - ID de la bodega
+ * @returns Objeto con httpStatus (201=nueva, 200=pendiente) y data con la autoevaluación
+ */
+export async function crearAutoevaluacion(idBodega: number): Promise<CrearAutoevaluacionResult> {
     const response = await fetch('/api/autoevaluaciones', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -35,11 +44,14 @@ export async function crearAutoevaluacion(idBodega: number): Promise<Autoevaluac
 
     const data = await response.json()
 
-    if (!response.ok) {
+    if (!response.ok && response.status !== 200 && response.status !== 201) {
         throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
     }
 
-    return data as AutoevaluacionCreada
+    return {
+        httpStatus: response.status,
+        data: data as CrearAutoevaluacionResponse
+    }
 }
 
 /**
@@ -182,4 +194,25 @@ export async function completarAutoevaluacion(
         throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
+
+/**
+ * Cancela una autoevaluación pendiente
+ * @param idAutoevaluacion - ID de la autoevaluación a cancelar
+ */
+export async function cancelarAutoevaluacion(
+    idAutoevaluacion: string | number
+): Promise<void> {
+    const response = await fetch(`/api/autoevaluaciones/${idAutoevaluacion}/cancelar`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+    }
+}
+
 

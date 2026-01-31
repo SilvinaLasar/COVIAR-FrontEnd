@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChevronRight, Check, Ban, AlertCircle, Users, Settings, CheckCircle2 } from "lucide-react"
+import { ChevronRight, Check, Ban, AlertCircle, Users, Settings, CheckCircle2, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
   crearAutoevaluacion,
   obtenerEstructuraAutoevaluacion,
   obtenerSegmentos,
   seleccionarSegmento,
-  guardarRespuesta,
-  completarAutoevaluacion
+  guardarRespuestas,
+  completarAutoevaluacion,
+  cancelarAutoevaluacion
 } from "@/lib/api/autoevaluacion"
 import type { CapituloEstructura, IndicadorEstructura, Segmento } from "@/lib/api/types"
 import {
@@ -38,16 +39,28 @@ export default function AutoevaluacionPage() {
 
   // Estado para navegación
   const [currentCapitulo, setCurrentCapitulo] = useState<CapituloEstructura | null>(null)
-  const [responses, setResponses] = useState<Record<string, number>>({})
+  const [responses, setResponses] = useState<Record<string, number>>({}) // key: capId-indId, value: puntos (para UI)
+  const [responsesForApi, setResponsesForApi] = useState<Record<number, number>>({}) // key: id_indicador, value: id_nivel_respuesta (para API)
   const [canFinalize, setCanFinalize] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showPendingDialog, setShowPendingDialog] = useState(false)
 
   // Estado para segmentos
   const [isSelectingSegment, setIsSelectingSegment] = useState(true)
   const [segmentos, setSegmentos] = useState<Segmento[]>([])
   const [selectedSegment, setSelectedSegment] = useState<Segmento | null>(null)
   const [loadingSegmentos, setLoadingSegmentos] = useState(false)
+
+  // Estado para el diálogo pendiente
+  const [pendingInfo, setPendingInfo] = useState<{
+    id: number
+    fechaInicio: string
+    tieneSegmento: boolean
+    cantidadRespuestas: number
+  } | null>(null)
+  const [savedResponses, setSavedResponses] = useState<Array<{ id_indicador: number, id_nivel_respuesta: number }>>([])
+
 
   // Obtener usuario e id_bodega
   useEffect(() => {
@@ -75,7 +88,7 @@ export default function AutoevaluacionPage() {
     }
   }, [router])
 
-  // Crear autoevaluación y cargar segmentos
+  // Iniciar autoevaluación - usa la respuesta de la API para determinar qué hacer
   useEffect(() => {
     if (!idBodega) return
 
@@ -84,25 +97,160 @@ export default function AutoevaluacionPage() {
       setLoadError(null)
 
       try {
-        const nuevaAutoevaluacion = await crearAutoevaluacion(idBodega)
-        const newId = String(nuevaAutoevaluacion.id_autoevaluacion)
-        setAssessmentId(newId)
-        localStorage.setItem('id_autoevaluacion', newId)
+        const result = await crearAutoevaluacion(idBodega)
+        const { httpStatus, data } = result
+        const auto = data.autoevaluacion_pendiente
+        const respuestasGuardadas = data.respuestas || []
 
-        const data = await obtenerSegmentos(newId)
-        setSegmentos(data)
-        setIsSelectingSegment(true)
+        console.log('Respuesta crearAutoevaluacion:', { httpStatus, auto, respuestasGuardadas })
+
+        const autoId = String(auto.id_autoevaluacion)
+        setAssessmentId(autoId)
+
+        // CASO 1: Nueva autoevaluación creada (201)
+        if (httpStatus === 201) {
+          console.log('CASO 1: Nueva autoevaluación creada')
+          // Ir directo a selección de segmentos
+          const segmentosData = await obtenerSegmentos(autoId)
+          setSegmentos(segmentosData)
+          setIsSelectingSegment(true)
+          setIsLoading(false)
+          return
+        }
+
+        // CASOS 2, 3, 4: Hay autoevaluación pendiente (200)
+        if (httpStatus === 200) {
+          // Guardar info para el diálogo
+          setPendingInfo({
+            id: auto.id_autoevaluacion,
+            fechaInicio: auto.fecha_inicio,
+            tieneSegmento: auto.id_segmento !== null,
+            cantidadRespuestas: respuestasGuardadas.length
+          })
+          setSavedResponses(respuestasGuardadas)
+          setShowPendingDialog(true)
+          setIsLoading(false)
+          return
+        }
+
       } catch (error) {
         console.error('Error al iniciar autoevaluación:', error)
         setLoadError(error instanceof Error ? error.message : 'Error al crear la autoevaluación')
       } finally {
         setIsLoading(false)
-        setLoadingSegmentos(false)
       }
     }
 
     iniciarAutoevaluacion()
   }, [idBodega])
+
+  // Manejar continuar con autoevaluación pendiente
+  const handleContinuePending = async () => {
+    if (!pendingInfo) return
+
+    const autoId = String(pendingInfo.id)
+    console.log('Continuando con autoevaluación pendiente:', autoId)
+
+    setShowPendingDialog(false)
+    setIsLoading(true)
+    setAssessmentId(autoId)
+
+    try {
+      // CASO 2: Pendiente SIN segmento - ir a selección de segmentos
+      if (!pendingInfo.tieneSegmento) {
+        console.log('CASO 2: Pendiente sin segmento - mostrando selector')
+        const segmentosData = await obtenerSegmentos(autoId)
+        setSegmentos(segmentosData)
+        setIsSelectingSegment(true)
+        setIsLoading(false)
+        return
+      }
+
+      // CASOS 3 y 4: Pendiente CON segmento - cargar estructura
+      console.log('CASO 3/4: Pendiente con segmento - cargando estructura')
+      const estructuraResponse = await obtenerEstructuraAutoevaluacion(autoId)
+
+      if (estructuraResponse.capitulos && estructuraResponse.capitulos.length > 0) {
+        setEstructura(estructuraResponse.capitulos)
+        setCurrentCapitulo(estructuraResponse.capitulos[0])
+
+        // Si hay respuestas guardadas, pre-cargarlas
+        if (savedResponses.length > 0) {
+          const responsesMap: Record<string, number> = {}
+          const apiResponsesMap: Record<number, number> = {}
+
+          // Buscar el nivel de puntos para cada respuesta guardada
+          estructuraResponse.capitulos.forEach(cap => {
+            cap.indicadores.forEach(ind => {
+              const savedResp = savedResponses.find(r => r.id_indicador === ind.indicador.id_indicador)
+              if (savedResp) {
+                // Guardar para API (id_indicador -> id_nivel_respuesta)
+                apiResponsesMap[ind.indicador.id_indicador] = savedResp.id_nivel_respuesta
+
+                // Guardar para UI (puntos)
+                const nivel = ind.niveles_respuesta.find(n => n.id_nivel_respuesta === savedResp.id_nivel_respuesta)
+                if (nivel) {
+                  const key = `${cap.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+                  responsesMap[key] = nivel.puntos
+                }
+              }
+            })
+          })
+          setResponses(responsesMap)
+          setResponsesForApi(apiResponsesMap)
+          console.log(`Cargadas ${Object.keys(responsesMap).length} respuestas guardadas`)
+        }
+
+        setIsSelectingSegment(false)
+      }
+    } catch (error) {
+      console.error('Error al continuar autoevaluación:', error)
+      setLoadError(error instanceof Error ? error.message : 'Error al cargar la autoevaluación pendiente')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Manejar cancelar autoevaluación pendiente y crear nueva
+  const handleCancelPending = async () => {
+    if (!pendingInfo || !idBodega) return
+
+    const autoId = String(pendingInfo.id)
+    console.log('Cancelando autoevaluación:', autoId)
+
+    setShowPendingDialog(false)
+    setIsLoading(true)
+
+    try {
+      // Llamar al endpoint para cancelar la autoevaluación pendiente
+      await cancelarAutoevaluacion(autoId)
+    } catch (error) {
+      console.error('Error al cancelar autoevaluación:', error)
+      // Continuar aunque falle el cancelar
+    }
+
+    // Limpiar info pendiente y recargar página para crear nueva
+    setPendingInfo(null)
+    setSavedResponses([])
+
+    // Crear nueva autoevaluación
+    try {
+      const result = await crearAutoevaluacion(idBodega)
+      const { data } = result
+      const auto = data.autoevaluacion_pendiente
+      const autoNewId = String(auto.id_autoevaluacion)
+
+      setAssessmentId(autoNewId)
+      const segmentosData = await obtenerSegmentos(autoNewId)
+      setSegmentos(segmentosData)
+      setIsSelectingSegment(true)
+    } catch (error) {
+      console.error('Error al crear nueva autoevaluación:', error)
+      setLoadError(error instanceof Error ? error.message : 'Error al crear la autoevaluación')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Verificar si se puede finalizar
   useEffect(() => {
@@ -121,15 +269,31 @@ export default function AutoevaluacionPage() {
     if (!assessmentId || !currentCapitulo) return
 
     const key = `${currentCapitulo.capitulo.id_capitulo}-${indicador.indicador.id_indicador}`
+
+    // Actualizar estado para UI (puntos)
     setResponses(prev => ({
       ...prev,
       [key]: newLevel
     }))
 
+    // Actualizar estado para API (id_indicador -> id_nivel_respuesta)
+    const updatedApiResponses = {
+      ...responsesForApi,
+      [indicador.indicador.id_indicador]: newNivelId
+    }
+    setResponsesForApi(updatedApiResponses)
+
+    // Convertir a array y enviar TODAS las respuestas
+    const respuestasArray = Object.entries(updatedApiResponses).map(([idIndicador, idNivelRespuesta]) => ({
+      id_indicador: parseInt(idIndicador),
+      id_nivel_respuesta: idNivelRespuesta
+    }))
+
     try {
-      await guardarRespuesta(assessmentId, indicador.indicador.id_indicador, newNivelId)
+      await guardarRespuestas(assessmentId, respuestasArray)
+      console.log(`Guardadas ${respuestasArray.length} respuestas`)
     } catch (error) {
-      console.error('Error al guardar respuesta:', error)
+      console.error('Error al guardar respuestas:', error)
     }
   }
 
@@ -179,16 +343,18 @@ export default function AutoevaluacionPage() {
   }
 
   const handleSelectSegment = async (segmento: Segmento) => {
-    if (!assessmentId) return
+    const currentId = assessmentId || (pendingInfo ? String(pendingInfo.id) : null)
+    if (!currentId) return
     if (estructura.length > 0) {
       if (!confirm(`¿Desea cambiar al segmento "${segmento.nombre}"? Esto recargará la estructura de la evaluación.`)) return
     }
 
     setIsLoading(true)
     try {
-      await seleccionarSegmento(assessmentId, segmento.id_segmento)
+      await seleccionarSegmento(currentId, segmento.id_segmento)
       setSelectedSegment(segmento)
-      const response = await obtenerEstructuraAutoevaluacion(assessmentId)
+      setAssessmentId(currentId) // Asegurar que assessmentId esté seteado
+      const response = await obtenerEstructuraAutoevaluacion(currentId)
       setEstructura(response.capitulos)
       if (response.capitulos.length > 0) {
         setCurrentCapitulo(response.capitulos[0])
@@ -423,6 +589,117 @@ export default function AutoevaluacionPage() {
           </Card>
         )}
       </div>
+
+      {/* Diálogo de Autoevaluación Pendiente */}
+      <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+          {/* Header con gradiente */}
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5 text-white">
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                <Clock className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-center">
+                <DialogTitle className="text-xl font-bold text-white">
+                  Autoevaluación Pendiente
+                </DialogTitle>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenido */}
+          <div className="px-6 py-5 space-y-4">
+            {pendingInfo && (
+              <div className="space-y-3">
+                {/* Fecha de inicio */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                    <span className="text-lg">📅</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Fecha de inicio</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {new Date(pendingInfo.fechaInicio).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Estado del segmento/respuestas */}
+                <div className={`flex items-center gap-3 p-3 rounded-lg border ${!pendingInfo.tieneSegmento
+                  ? 'bg-amber-50 border-amber-200'
+                  : pendingInfo.cantidadRespuestas === 0
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-green-50 border-green-200'
+                  }`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${!pendingInfo.tieneSegmento
+                    ? 'bg-amber-100'
+                    : pendingInfo.cantidadRespuestas === 0
+                      ? 'bg-blue-100'
+                      : 'bg-green-100'
+                    }`}>
+                    <span className="text-lg">
+                      {!pendingInfo.tieneSegmento ? '⚠️' : pendingInfo.cantidadRespuestas === 0 ? '📊' : '📝'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Estado</p>
+                    <p className={`text-sm font-semibold ${!pendingInfo.tieneSegmento
+                      ? 'text-amber-700'
+                      : pendingInfo.cantidadRespuestas === 0
+                        ? 'text-blue-700'
+                        : 'text-green-700'
+                      }`}>
+                      {!pendingInfo.tieneSegmento
+                        ? 'Sin segmento seleccionado'
+                        : pendingInfo.cantidadRespuestas === 0
+                          ? 'Segmento seleccionado - Sin respuestas'
+                          : `${pendingInfo.cantidadRespuestas} respuestas guardadas`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Mensaje informativo */}
+            <p className="text-center text-sm text-gray-600 py-2">
+              {!pendingInfo?.tieneSegmento
+                ? "Para continuar, debes seleccionar un segmento."
+                : pendingInfo.cantidadRespuestas > 0
+                  ? "Tienes respuestas guardadas que se cargarán automáticamente."
+                  : "Puedes continuar respondiendo el cuestionario."
+              }
+            </p>
+          </div>
+
+          {/* Footer con botones */}
+          <div className="px-6 py-4 bg-gray-50 border-t flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              variant="outline"
+              onClick={handleCancelPending}
+              className="order-2 sm:order-1 border-gray-300 bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+            >
+              {pendingInfo?.cantidadRespuestas && pendingInfo.cantidadRespuestas > 0
+                ? "Cancelar y Perder Respuestas"
+                : "Cancelar y Crear Nueva"}
+            </Button>
+            <Button
+              onClick={handleContinuePending}
+              className="order-1 sm:order-2 bg-[#722F37] hover:bg-[#5a252c] text-white font-medium"
+            >
+              {!pendingInfo?.tieneSegmento
+                ? "Seleccionar Segmento"
+                : "Continuar Autoevaluación"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent className="sm:max-w-md">

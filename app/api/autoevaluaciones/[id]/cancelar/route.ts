@@ -3,14 +3,17 @@ import { NextRequest, NextResponse } from 'next/server'
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 /**
- * POST /api/autoevaluaciones
- * Crear una nueva autoevaluación
+ * POST /api/autoevaluaciones/{id}/cancelar
+ * Cancela una autoevaluación pendiente
  */
-export async function POST(request: NextRequest) {
+export async function POST(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const body = await request.json()
+        const { id } = await params
 
-        console.log('Proxy: Creando autoevaluación', body)
+        console.log('Proxy: Cancelando autoevaluación', id)
 
         const cookies = request.headers.get('Cookie')
         const authHeader = request.headers.get('Authorization')
@@ -27,26 +30,26 @@ export async function POST(request: NextRequest) {
             headers['Authorization'] = authHeader
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/autoevaluaciones`, {
+        const backendUrl = `${API_BASE_URL}/api/autoevaluaciones/${id}/cancelar`
+
+        const response = await fetch(backendUrl, {
             method: 'POST',
             headers,
             credentials: 'include',
-            body: JSON.stringify(body),
         })
 
         const data = await response.json().catch(() => ({}))
 
         if (!response.ok) {
-            console.error('Proxy: Error al crear autoevaluación:', response.status, data)
+            console.error('Proxy: Error al cancelar autoevaluación:', response.status, data)
             return NextResponse.json(
                 { message: data.message || `Error ${response.status}: ${response.statusText}` },
                 { status: response.status }
             )
         }
 
-        console.log('Proxy: Autoevaluación respuesta:', response.status, data)
-        // Pasar el status original del backend (201 = nueva, 200 = pendiente)
-        return NextResponse.json(data, { status: response.status })
+        console.log('Proxy: Autoevaluación cancelada exitosamente')
+        return NextResponse.json(data)
     } catch (error) {
         console.error('Proxy: Error de conexión:', error)
         return NextResponse.json(

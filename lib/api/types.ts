@@ -106,6 +106,28 @@ export interface Autoevaluacion {
   respuestas: Record<string, unknown>
 }
 
+export interface AutoevaluacionPendiente {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  estado: string
+  id_bodega: number
+  id_segmento: number | null
+  puntaje_final: number | null
+  id_nivel_sostenibilidad: number | null
+}
+
+export interface RespuestaGuardada {
+  id_indicador: number
+  id_nivel_respuesta: number
+}
+
+export interface CrearAutoevaluacionResponse {
+  autoevaluacion_pendiente: AutoevaluacionPendiente
+  respuestas: RespuestaGuardada[]
+  mensaje: string
+}
+
+// Legacy type for backwards compatibility
 export interface AutoevaluacionCreada {
   id_autoevaluacion: number
   fecha_inicio: string
