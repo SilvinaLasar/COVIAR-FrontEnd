@@ -136,6 +136,46 @@ export interface AutoevaluacionCreada {
   id_version: number
 }
 
+// ============= HISTORIAL Y RESULTADOS =============
+
+export interface AutoevaluacionHistorial {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  fecha_finalizacion?: string
+  estado: 'pendiente' | 'completada' | 'cancelada'
+  id_bodega: number
+  id_segmento: number | null
+  puntaje_final: number | null
+  puntaje_maximo: number | null
+  porcentaje: number | null
+  id_nivel_sostenibilidad: number | null
+  nivel_sostenibilidad?: {
+    id: number
+    nombre: string
+    descripcion?: string
+  }
+}
+
+export interface ResultadoCapitulo {
+  id_capitulo: number
+  nombre: string
+  puntaje_obtenido: number
+  puntaje_maximo: number
+  porcentaje: number
+  indicadores_completados: number
+  indicadores_total: number
+}
+
+export interface ResultadoDetallado {
+  autoevaluacion: AutoevaluacionHistorial
+  capitulos: ResultadoCapitulo[]
+  comparativa?: {
+    evaluacion_anterior?: AutoevaluacionHistorial
+    diferencia_puntaje: number
+    diferencia_porcentaje: number
+  }
+}
+
 export interface RespuestaIndicador {
   id_indicador: number
   id_nivel_respuesta: number

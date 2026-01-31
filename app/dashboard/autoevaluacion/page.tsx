@@ -320,15 +320,42 @@ export default function AutoevaluacionPage() {
     }
   }
 
+  // Verificar si el capítulo actual está completo
+  const isCurrentChapterComplete = (): boolean => {
+    if (!currentCapitulo) return false
+
+    const indicadoresHabilitados = currentCapitulo.indicadores.filter(ind => ind.habilitado)
+    const indicadoresRespondidos = indicadoresHabilitados.filter(ind => {
+      const key = `${currentCapitulo.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+      return responses[key] !== undefined
+    })
+
+    return indicadoresRespondidos.length === indicadoresHabilitados.length
+  }
+
   // Navegación de Capítulos
   const cambiarCapitulo = (direction: 'next' | 'prev') => {
     if (!currentCapitulo) return
     const currentIndex = estructura.findIndex(c => c.capitulo.id_capitulo === currentCapitulo.capitulo.id_capitulo)
     if (currentIndex === -1) return
 
-    if (direction === 'next' && currentIndex < estructura.length - 1) {
-      setCurrentCapitulo(estructura[currentIndex + 1])
-      window.scrollTo(0, 0)
+    // Validar que el capítulo actual esté completo antes de avanzar
+    if (direction === 'next') {
+      if (!isCurrentChapterComplete()) {
+        const indicadoresHabilitados = currentCapitulo.indicadores.filter(ind => ind.habilitado)
+        const indicadoresRespondidos = indicadoresHabilitados.filter(ind => {
+          const key = `${currentCapitulo.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+          return responses[key] !== undefined
+        })
+        const faltantes = indicadoresHabilitados.length - indicadoresRespondidos.length
+        alert(`Debes completar todos los indicadores de este capítulo antes de continuar.\n\nFaltan ${faltantes} indicador(es) por responder.`)
+        return
+      }
+
+      if (currentIndex < estructura.length - 1) {
+        setCurrentCapitulo(estructura[currentIndex + 1])
+        window.scrollTo(0, 0)
+      }
     } else if (direction === 'prev' && currentIndex > 0) {
       setCurrentCapitulo(estructura[currentIndex - 1])
       window.scrollTo(0, 0)
@@ -340,6 +367,26 @@ export default function AutoevaluacionPage() {
     setIsFinalizing(true)
     try {
       await completarAutoevaluacion(assessmentId)
+
+      // Calcular el puntaje total locamente
+      const totalScore = Object.values(responses).reduce((acc, puntos) => acc + puntos, 0)
+      const maxScore = estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
+        const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
+        return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
+      }, 0), 0)
+      const porcentaje = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
+
+      // Guardar en localStorage para la página de resultados
+      const resultData = {
+        assessmentId,
+        puntaje_final: totalScore,
+        puntaje_maximo: maxScore,
+        porcentaje,
+        fecha_completo: new Date().toISOString(),
+        segmento: selectedSegment?.nombre || 'N/A'
+      }
+      localStorage.setItem(`resultado_${assessmentId}`, JSON.stringify(resultData))
+
       setShowSuccessDialog(true)
     } catch (error) {
       console.error('Error al finalizar:', error)
@@ -461,6 +508,13 @@ export default function AutoevaluacionPage() {
                   }, 0), 0)} puntos
                 </div>
               </div>
+
+              <div className="border-l border-zinc-700 pl-6">
+                <div className="text-xs text-zinc-400 uppercase font-semibold">Puntuación actual</div>
+                <div className="font-bold text-lg leading-tight bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent">
+                  {Object.values(responses).reduce((acc, puntos) => acc + puntos, 0)} puntos
+                </div>
+              </div>
             </div>
 
             <div className="flex-1 max-w-xl">
@@ -559,9 +613,22 @@ export default function AutoevaluacionPage() {
                   {isFinalizing ? "Finalizando..." : "Finalizar Autoevaluación"}
                 </Button>
               ) : (
-                <Button onClick={() => cambiarCapitulo('next')}>
-                  Siguiente Capítulo
-                </Button>
+                <div className="flex items-center gap-3">
+                  {!isCurrentChapterComplete() && (
+                    <span className="text-sm text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      Completa todos los indicadores para continuar
+                    </span>
+                  )}
+                  <Button
+                    onClick={() => cambiarCapitulo('next')}
+                    disabled={!isCurrentChapterComplete()}
+                    className={!isCurrentChapterComplete() ? "opacity-50" : ""}
+                  >
+                    Siguiente Capítulo
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -739,9 +806,9 @@ export default function AutoevaluacionPage() {
           <DialogFooter className="sm:justify-center pt-4">
             <Button
               className="bg-[#722F37] hover:bg-[#5a252c] min-w-[150px]"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(`/dashboard/resultados/${assessmentId}`)}
             >
-              Volver al Dashboard
+              Ver Resultados
             </Button>
           </DialogFooter>
         </DialogContent>

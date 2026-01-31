@@ -73,79 +73,113 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Tarjetas de Acceso Rápido */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Autoevaluación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Completa la evaluación de sostenibilidad de tu bodega
-            </p>
-            <Button asChild className="w-full">
-              <Link href="/dashboard/autoevaluacion">
-                Iniciar Evaluación
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Historial</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Revisa tus evaluaciones anteriores
-            </p>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/dashboard/historial">
-                Ver Historial
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Banner de Acceso Principal */}
+      <div className="space-y-12 max-w-5xl mx-auto pb-12">
+        {/* Título Principal */}
+        <div className="text-center space-y-4">
+          <h2 className="text-4xl md:text-5xl font-black text-[#880D1E] tracking-tight uppercase">
+            Guía de Autoevaluación
+            <span className="block text-foreground mt-2">Sostenibilidad Enoturística Argentina</span>
+          </h2>
+          <p className="text-muted-foreground font-medium tracking-widest uppercase">
+            #PEVI2030 El Plan de la Vitivinicultura Argentina
+          </p>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Gestiona tu cuenta y preferencias
-            </p>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/dashboard/configuracion">
-                Configurar
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* ¿Qué es? */}
+        <div className="bg-muted/30 p-8 rounded-2xl border border-border/50 text-center space-y-4">
+          <h3 className="text-2xl font-bold text-foreground">
+            ¿Qué es la Guía de Evaluación de la Sostenibilidad Enoturística?
+          </h3>
+          <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+            Es un instrumento de evaluación y gestión que permite a las bodegas abiertas al turismo
+            <span className="font-semibold text-foreground"> medir, ordenar y mejorar</span> su desempeño en sostenibilidad enoturística,
+            considerando las dimensiones <span className="font-semibold text-foreground">ambiental, social y económica</span>.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* ¿Para qué sirve? */}
+          <Card className="border-l-4 border-l-[#880D1E] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">¿Para qué sirve?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-muted-foreground">
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Diagnosticar su situación actual en materia de sostenibilidad enoturística.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Identificar brechas y oportunidades de mejora en su gestión turística.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Planificar acciones concretas a corto, mediano y largo plazo.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Ordenar sus prácticas según estándares internacionales reconocidos.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Comunicar resultados de manera consistente a turistas, instituciones y otros públicos de interés.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* ¿Qué beneficios aporta? */}
+          <Card className="border-l-4 border-l-[#880D1E] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">¿Qué beneficios aporta?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-muted-foreground">
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Mejorar la calidad y eficiencia de la experiencia turística.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Aumentar la satisfacción del visitante, especialmente del turista consciente.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Reducir riesgos operativos, ambientales y reputacionales.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Fortalecer la integración con la comunidad local.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Contribuir a la preservación del patrimonio cultural y productivo.
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-[#880D1E] font-bold">•</span>
+                  Adaptar la gestión sostenible al tamaño y capacidad real de la bodega.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Botón Final */}
+        <div className="flex justify-center pt-8">
+          <Button
+            asChild
+            size="lg"
+            className="bg-[#880D1E] hover:bg-[#6a0a17] text-white text-xl px-12 py-8 rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1"
+          >
+            <Link href="/dashboard/autoevaluacion">
+              COMENZAR GUÍA DE AUTOEVALUACIÓN
+            </Link>
+          </Button>
+        </div>
       </div>
-
-      {/* Estadísticas Rápidas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Próximamente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-sm text-muted-foreground">Evaluaciones Completadas</p>
-            </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">0%</p>
-              <p className="text-sm text-muted-foreground">Nivel de Sostenibilidad</p>
-            </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">-</p>
-              <p className="text-sm text-muted-foreground">Última Evaluación</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </div >
   )
 }

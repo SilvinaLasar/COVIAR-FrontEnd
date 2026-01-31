@@ -1,6 +1,6 @@
 // lib/api/autoevaluacion.ts
 
-import type { EstructuraAutoevaluacionResponse, Segmento, CrearAutoevaluacionResponse, RespuestaIndicador } from './types'
+import type { EstructuraAutoevaluacionResponse, Segmento, CrearAutoevaluacionResponse, RespuestaIndicador, AutoevaluacionHistorial, ResultadoDetallado } from './types'
 
 /**
  * Servicios de API para autoevaluaciones
@@ -215,4 +215,47 @@ export async function cancelarAutoevaluacion(
     }
 }
 
+/**
+ * Obtiene el historial de autoevaluaciones de una bodega
+ * @param idBodega - ID de la bodega
+ */
+export async function obtenerHistorialAutoevaluaciones(
+    idBodega: number
+): Promise<AutoevaluacionHistorial[]> {
+    const response = await fetch(`/api/autoevaluaciones/historial?id_bodega=${idBodega}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+    }
+
+    return data as AutoevaluacionHistorial[]
+}
+
+/**
+ * Obtiene los resultados detallados de una autoevaluación
+ * @param idAutoevaluacion - ID de la autoevaluación
+ */
+export async function obtenerResultadosAutoevaluacion(
+    idAutoevaluacion: string | number
+): Promise<ResultadoDetallado> {
+    const response = await fetch(`/api/autoevaluaciones/${idAutoevaluacion}/resultados`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+    }
+
+    return data as ResultadoDetallado
+}
 
