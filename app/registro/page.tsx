@@ -59,72 +59,79 @@ export default function RegistroPage() {
   const [loadingDepartamentos, setLoadingDepartamentos] = useState(false)
   const [loadingLocalidades, setLoadingLocalidades] = useState(false)
 
-  // Cargar provincias al montar el componente
+  // Cargar provincias al montar el componente (solo una vez)
   useEffect(() => {
+    let isMounted = true
+
     async function cargarProvincias() {
       try {
         const data = await getProvincias()
-        setProvincias(data)
+        if (isMounted) {
+          setProvincias(data)
+        }
       } catch (err) {
         console.error("Error cargando provincias:", err)
       } finally {
-        setLoadingProvincias(false)
+        if (isMounted) {
+          setLoadingProvincias(false)
+        }
       }
     }
+
     cargarProvincias()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  // Cargar departamentos cuando cambia la provincia
-  useEffect(() => {
-    if (!provinciaId) {
-      setDepartamentos([])
-      setDepartamentoId("")
-      setLocalidades([])
-      setLocalidadId("")
-      return
-    }
+  // Handler para cuando cambia la provincia - NO usar useEffect para esto
+  const handleProvinciaChange = (value: string) => {
+    setProvinciaId(value)
+    // Limpiar selecciones dependientes
+    setDepartamentoId("")
+    setDepartamentos([])
+    setLocalidadId("")
+    setLocalidades([])
 
-    async function cargarDepartamentos() {
+    if (value) {
       setLoadingDepartamentos(true)
-      setDepartamentoId("")
-      setLocalidades([])
-      setLocalidadId("")
-      try {
-        const data = await getDepartamentosPorProvincia(Number(provinciaId))
-        setDepartamentos(data)
-      } catch (err) {
-        console.error("Error cargando departamentos:", err)
-        setDepartamentos([])
-      } finally {
-        setLoadingDepartamentos(false)
-      }
+      getDepartamentosPorProvincia(Number(value))
+        .then((data) => {
+          setDepartamentos(data)
+        })
+        .catch((err) => {
+          console.error("Error cargando departamentos:", err)
+          setDepartamentos([])
+        })
+        .finally(() => {
+          setLoadingDepartamentos(false)
+        })
     }
-    cargarDepartamentos()
-  }, [provinciaId])
+  }
 
-  // Cargar localidades cuando cambia el departamento
-  useEffect(() => {
-    if (!departamentoId) {
-      setLocalidades([])
-      setLocalidadId("")
-      return
-    }
+  // Handler para cuando cambia el departamento - NO usar useEffect para esto
+  const handleDepartamentoChange = (value: string) => {
+    setDepartamentoId(value)
+    // Limpiar selección dependiente
+    setLocalidadId("")
+    setLocalidades([])
 
-    async function cargarLocalidades() {
+    if (value) {
       setLoadingLocalidades(true)
-      setLocalidadId("")
-      try {
-        const data = await getLocalidadesPorDepartamento(Number(departamentoId))
-        setLocalidades(data)
-      } catch (err) {
-        console.error("Error cargando localidades:", err)
-        setLocalidades([])
-      } finally {
-        setLoadingLocalidades(false)
-      }
+      getLocalidadesPorDepartamento(Number(value))
+        .then((data) => {
+          setLocalidades(data)
+        })
+        .catch((err) => {
+          console.error("Error cargando localidades:", err)
+          setLocalidades([])
+        })
+        .finally(() => {
+          setLoadingLocalidades(false)
+        })
     }
-    cargarLocalidades()
-  }, [departamentoId])
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -387,7 +394,7 @@ export default function RegistroPage() {
                 <Label htmlFor="provincia">Provincia <span className="text-red-500">*</span></Label>
                 <Select
                   value={provinciaId}
-                  onValueChange={setProvinciaId}
+                  onValueChange={handleProvinciaChange}
                   disabled={loadingProvincias}
                 >
                   <SelectTrigger id="provincia" className="w-full">
@@ -407,7 +414,7 @@ export default function RegistroPage() {
                 <Label htmlFor="departamento">Departamento <span className="text-red-500">*</span></Label>
                 <Select
                   value={departamentoId}
-                  onValueChange={setDepartamentoId}
+                  onValueChange={handleDepartamentoChange}
                   disabled={!provinciaId || loadingDepartamentos}
                 >
                   <SelectTrigger id="departamento" className="w-full">
