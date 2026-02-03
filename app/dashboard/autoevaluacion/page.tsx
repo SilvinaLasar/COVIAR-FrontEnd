@@ -563,7 +563,7 @@ export default function AutoevaluacionPage() {
                   <CardContent>
                     <RadioGroup
                       value={savedValue?.toString()}
-                      onValueChange={(v) => {
+                      onValueChange={(v: string) => {
                         const nivel = indicadorWrapper.niveles_respuesta.find(n => n.puntos.toString() === v)
                         if (nivel) {
                           handleResponseChange(indicadorWrapper, nivel.puntos, nivel.id_nivel_respuesta)

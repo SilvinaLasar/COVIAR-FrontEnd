@@ -1,9 +1,7 @@
 // lib/api/auth.ts
 
-import { api } from './client'
 import type {
   LoginRequest,
-  LoginResponse,
   RegistroRequest,
   RegistroResponse,
   Usuario,

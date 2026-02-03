@@ -42,10 +42,10 @@ export async function crearAutoevaluacion(idBodega: number): Promise<CrearAutoev
         body: JSON.stringify({ id_bodega: idBodega }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok && response.status !== 200 && response.status !== 201) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return {
@@ -68,10 +68,10 @@ export async function obtenerEstructuraAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as EstructuraAutoevaluacionResponse
@@ -90,10 +90,10 @@ export async function obtenerSegmentos(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as Segmento[]
@@ -115,10 +115,10 @@ export async function seleccionarSegmento(
         body: JSON.stringify({ id_segmento: idSegmento }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -138,10 +138,10 @@ export async function guardarRespuestas(
         body: JSON.stringify({ respuestas }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -168,10 +168,10 @@ export async function guardarRespuesta(
         }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -188,10 +188,10 @@ export async function completarAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -208,10 +208,10 @@ export async function cancelarAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -228,10 +228,10 @@ export async function obtenerHistorialAutoevaluaciones(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as AutoevaluacionHistorial[]
@@ -250,10 +250,10 @@ export async function obtenerResultadosAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as ResultadoDetallado
