@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             headers['Authorization'] = authHeader
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/autoevaluaciones`, {
+        const response = await fetch(`${API_BASE_URL}/api/autoevaluaciones`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        console.log('Proxy: Autoevaluación creada:', data)
-        return NextResponse.json(data)
+        console.log('Proxy: Autoevaluación respuesta:', response.status, data)
+        // Pasar el status original del backend (201 = nueva, 200 = pendiente)
+        return NextResponse.json(data, { status: response.status })
     } catch (error) {
         console.error('Proxy: Error de conexión:', error)
         return NextResponse.json(

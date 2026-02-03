@@ -1,6 +1,6 @@
 // lib/api/autoevaluacion.ts
 
-import type { EstructuraAutoevaluacionResponse, Segmento, AutoevaluacionCreada, RespuestaIndicador } from './types'
+import type { EstructuraAutoevaluacionResponse, Segmento, CrearAutoevaluacionResponse, RespuestaIndicador, AutoevaluacionHistorial, ResultadoDetallado } from './types'
 
 /**
  * Servicios de API para autoevaluaciones
@@ -22,10 +22,19 @@ function getAuthHeaders(): HeadersInit {
 }
 
 /**
- * Crea una nueva autoevaluación para una bodega
- * @param idBodega - ID de la bodega
+ * Respuesta extendida de crearAutoevaluacion que incluye el status HTTP
  */
-export async function crearAutoevaluacion(idBodega: number): Promise<AutoevaluacionCreada> {
+export interface CrearAutoevaluacionResult {
+    httpStatus: number
+    data: CrearAutoevaluacionResponse
+}
+
+/**
+ * Crea una nueva autoevaluación para una bodega o retorna la pendiente
+ * @param idBodega - ID de la bodega
+ * @returns Objeto con httpStatus (201=nueva, 200=pendiente) y data con la autoevaluación
+ */
+export async function crearAutoevaluacion(idBodega: number): Promise<CrearAutoevaluacionResult> {
     const response = await fetch('/api/autoevaluaciones', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -33,13 +42,16 @@ export async function crearAutoevaluacion(idBodega: number): Promise<Autoevaluac
         body: JSON.stringify({ id_bodega: idBodega }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
-    if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+    if (!response.ok && response.status !== 200 && response.status !== 201) {
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
-    return data as AutoevaluacionCreada
+    return {
+        httpStatus: response.status,
+        data: data as CrearAutoevaluacionResponse
+    }
 }
 
 /**
@@ -56,10 +68,10 @@ export async function obtenerEstructuraAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as EstructuraAutoevaluacionResponse
@@ -78,10 +90,10 @@ export async function obtenerSegmentos(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 
     return data as Segmento[]
@@ -103,10 +115,10 @@ export async function seleccionarSegmento(
         body: JSON.stringify({ id_segmento: idSegmento }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -126,10 +138,10 @@ export async function guardarRespuestas(
         body: JSON.stringify({ respuestas }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
 }
 
@@ -144,9 +156,23 @@ export async function guardarRespuesta(
     idIndicador: number,
     idNivelRespuesta: number
 ): Promise<void> {
-    return guardarRespuestas(idAutoevaluacion, [
-        { id_indicador: idIndicador, id_nivel_respuesta: idNivelRespuesta }
-    ])
+    const response = await fetch(`/api/autoevaluaciones/${idAutoevaluacion}/respuestas`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+            respuestas: [{
+                id_indicador: idIndicador,
+                id_nivel_respuesta: idNivelRespuesta
+            }]
+        }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
+    }
 }
 
 /**
@@ -162,10 +188,74 @@ export async function completarAutoevaluacion(
         credentials: 'include',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}: ${response.statusText}`)
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
     }
+}
+
+/**
+ * Cancela una autoevaluación pendiente
+ * @param idAutoevaluacion - ID de la autoevaluación a cancelar
+ */
+export async function cancelarAutoevaluacion(
+    idAutoevaluacion: string | number
+): Promise<void> {
+    const response = await fetch(`/api/autoevaluaciones/${idAutoevaluacion}/cancelar`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
+    }
+}
+
+/**
+ * Obtiene el historial de autoevaluaciones de una bodega
+ * @param idBodega - ID de la bodega
+ */
+export async function obtenerHistorialAutoevaluaciones(
+    idBodega: number
+): Promise<AutoevaluacionHistorial[]> {
+    const response = await fetch(`/api/autoevaluaciones/historial?id_bodega=${idBodega}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
+    }
+
+    return data as AutoevaluacionHistorial[]
+}
+
+/**
+ * Obtiene los resultados detallados de una autoevaluación
+ * @param idAutoevaluacion - ID de la autoevaluación
+ */
+export async function obtenerResultadosAutoevaluacion(
+    idAutoevaluacion: string | number
+): Promise<ResultadoDetallado> {
+    const response = await fetch(`/api/autoevaluaciones/${idAutoevaluacion}/resultados`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+        throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`)
+    }
+
+    return data as ResultadoDetallado
 }
 

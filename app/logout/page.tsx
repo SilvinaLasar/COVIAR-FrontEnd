@@ -16,7 +16,6 @@ export default function LogoutPage() {
             setCountdown((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer)
-                    router.push("/login")
                     return 0
                 }
                 return prev - 1
@@ -24,7 +23,14 @@ export default function LogoutPage() {
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [router])
+    }, [])
+
+    // Redirect when countdown reaches 0
+    useEffect(() => {
+        if (countdown === 0) {
+            router.push("/login")
+        }
+    }, [countdown, router])
 
     const handleGoToLogin = () => {
         router.push("/login")

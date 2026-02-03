@@ -6,21 +6,31 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChevronRight, Check, Ban, AlertCircle } from "lucide-react"
+import { ChevronRight, Check, Ban, AlertCircle, Users, Settings, CheckCircle2, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
+  crearAutoevaluacion,
   obtenerEstructuraAutoevaluacion,
   obtenerSegmentos,
   seleccionarSegmento,
-  guardarRespuesta,
-  completarAutoevaluacion
+  guardarRespuestas,
+  completarAutoevaluacion,
+  cancelarAutoevaluacion
 } from "@/lib/api/autoevaluacion"
 import type { CapituloEstructura, IndicadorEstructura, Segmento } from "@/lib/api/types"
-import { Users, Settings } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function AutoevaluacionPage() {
   const router = useRouter()
   const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const [idBodega, setIdBodega] = useState<number | null>(null)
 
   // Estado para la estructura de la API
   const [estructura, setEstructura] = useState<CapituloEstructura[]>([])
@@ -29,22 +39,30 @@ export default function AutoevaluacionPage() {
 
   // Estado para navegación
   const [currentCapitulo, setCurrentCapitulo] = useState<CapituloEstructura | null>(null)
-  const [currentIndicador, setCurrentIndicador] = useState<IndicadorEstructura | null>(null)
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
-  const [selectedNivelRespuestaId, setSelectedNivelRespuestaId] = useState<number | null>(null)
-  const [responses, setResponses] = useState<Record<string, number>>({})
-  const [isSaving, setIsSaving] = useState(false)
+  const [responses, setResponses] = useState<Record<string, number>>({}) // key: capId-indId, value: puntos (para UI)
+  const [responsesForApi, setResponsesForApi] = useState<Record<number, number>>({}) // key: id_indicador, value: id_nivel_respuesta (para API)
   const [canFinalize, setCanFinalize] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showPendingDialog, setShowPendingDialog] = useState(false)
 
   // Estado para segmentos
-  // Estado para segmentos - Empezamos seleccionando segmento por defecto
   const [isSelectingSegment, setIsSelectingSegment] = useState(true)
   const [segmentos, setSegmentos] = useState<Segmento[]>([])
   const [selectedSegment, setSelectedSegment] = useState<Segmento | null>(null)
   const [loadingSegmentos, setLoadingSegmentos] = useState(false)
 
-  // Obtener usuario y ID de autoevaluación
+  // Estado para el diálogo pendiente
+  const [pendingInfo, setPendingInfo] = useState<{
+    id: number
+    fechaInicio: string
+    tieneSegmento: boolean
+    cantidadRespuestas: number
+  } | null>(null)
+  const [savedResponses, setSavedResponses] = useState<Array<{ id_indicador: number, id_nivel_respuesta: number }>>([])
+
+
+  // Obtener usuario e id_bodega
   useEffect(() => {
     const usuarioStr = localStorage.getItem('usuario')
 
@@ -54,50 +72,200 @@ export default function AutoevaluacionPage() {
     }
 
     try {
-      JSON.parse(usuarioStr) // Validates that the user is logged in
+      const usuario = JSON.parse(usuarioStr)
+      const bodegaId = usuario.bodega?.id_bodega || usuario.id_bodega
 
-      // Obtener el ID de autoevaluación desde localStorage o URL
-      const storedAssessmentId = localStorage.getItem('id_autoevaluacion')
-      if (storedAssessmentId) {
-        setAssessmentId(storedAssessmentId)
-      } else {
-        // ID de prueba por ahora - TODO: obtener de flujo real
-        setAssessmentId("1")
+      if (!bodegaId) {
+        setLoadError("No se encontró información de la bodega. Por favor, inicie sesión nuevamente.")
+        setIsLoading(false)
+        return
       }
+
+      setIdBodega(bodegaId)
     } catch (error) {
       console.error('Error al obtener usuario:', error)
       router.push("/login")
     }
   }, [router])
 
-  // Cargar segmentos disponibles al iniciar
+  // Iniciar autoevaluación - usa la respuesta de la API para determinar qué hacer
   useEffect(() => {
-    if (!assessmentId) return
+    if (!idBodega) return
 
-    const cargarSegmentosIniciales = async () => {
+    const iniciarAutoevaluacion = async () => {
       setIsLoading(true)
       setLoadError(null)
+
       try {
-        const data = await obtenerSegmentos(assessmentId)
-        setSegmentos(data)
-        setIsSelectingSegment(true)
+        const result = await crearAutoevaluacion(idBodega)
+        const { httpStatus, data } = result
+        const auto = data.autoevaluacion_pendiente
+        const respuestasGuardadas = data.respuestas || []
+
+        console.log('Respuesta crearAutoevaluacion:', { httpStatus, auto, respuestasGuardadas })
+
+        const autoId = String(auto.id_autoevaluacion)
+        setAssessmentId(autoId)
+
+        // CASO 1: Nueva autoevaluación creada (201)
+        if (httpStatus === 201) {
+          console.log('CASO 1: Nueva autoevaluación creada')
+          // Ir directo a selección de segmentos
+          const segmentosData = await obtenerSegmentos(autoId)
+          setSegmentos(segmentosData)
+          setIsSelectingSegment(true)
+          setIsLoading(false)
+          return
+        }
+
+        // CASOS 2, 3, 4: Hay autoevaluación pendiente (200)
+        if (httpStatus === 200) {
+          // Guardar info para el diálogo
+          setPendingInfo({
+            id: auto.id_autoevaluacion,
+            fechaInicio: auto.fecha_inicio,
+            tieneSegmento: auto.id_segmento !== null,
+            cantidadRespuestas: respuestasGuardadas.length
+          })
+          setSavedResponses(respuestasGuardadas)
+          setShowPendingDialog(true)
+          setIsLoading(false)
+          return
+        }
+
       } catch (error) {
-        console.error('Error al cargar segmentos iniciales:', error)
-        setLoadError(error instanceof Error ? error.message : 'Error al cargar segmentos')
+        console.error('Error al iniciar autoevaluación:', error)
+        setLoadError(error instanceof Error ? error.message : 'Error al crear la autoevaluación')
       } finally {
         setIsLoading(false)
-        setLoadingSegmentos(false)
       }
     }
 
-    cargarSegmentosIniciales()
-  }, [assessmentId])
+    iniciarAutoevaluacion()
+  }, [idBodega])
+
+  // Manejar continuar con autoevaluación pendiente
+  const handleContinuePending = async () => {
+    if (!pendingInfo) return
+
+    const autoId = String(pendingInfo.id)
+    console.log('Continuando con autoevaluación pendiente:', autoId)
+
+    setShowPendingDialog(false)
+    setIsLoading(true)
+    setAssessmentId(autoId)
+
+    try {
+      // CASO 2: Pendiente SIN segmento - ir a selección de segmentos
+      if (!pendingInfo.tieneSegmento) {
+        console.log('CASO 2: Pendiente sin segmento - mostrando selector')
+        const segmentosData = await obtenerSegmentos(autoId)
+        setSegmentos(segmentosData)
+        setIsSelectingSegment(true)
+        setIsLoading(false)
+        return
+      }
+
+      // CASOS 3 y 4: Pendiente CON segmento - cargar estructura
+      console.log('CASO 3/4: Pendiente con segmento - cargando estructura')
+      const estructuraResponse = await obtenerEstructuraAutoevaluacion(autoId)
+
+      if (estructuraResponse.capitulos && estructuraResponse.capitulos.length > 0) {
+        setEstructura(estructuraResponse.capitulos)
+        setCurrentCapitulo(estructuraResponse.capitulos[0])
+
+        // Si hay respuestas guardadas, pre-cargarlas
+        if (savedResponses.length > 0) {
+          const responsesMap: Record<string, number> = {}
+          const apiResponsesMap: Record<number, number> = {}
+
+          // Primero, eliminar duplicados de la API (tomar la última ocurrencia)
+          const uniqueResponses = new Map<number, number>()
+          savedResponses.forEach(r => {
+            uniqueResponses.set(r.id_indicador, r.id_nivel_respuesta)
+          })
+
+          if (savedResponses.length !== uniqueResponses.size) {
+            console.warn(`⚠️ API devolvió ${savedResponses.length} respuestas pero solo ${uniqueResponses.size} son únicas`)
+          }
+
+          // Buscar el nivel de puntos para cada respuesta guardada
+          estructuraResponse.capitulos.forEach(cap => {
+            cap.indicadores.forEach(ind => {
+              const savedNivelId = uniqueResponses.get(ind.indicador.id_indicador)
+              if (savedNivelId !== undefined) {
+                // Guardar para API (id_indicador -> id_nivel_respuesta)
+                apiResponsesMap[ind.indicador.id_indicador] = savedNivelId
+
+                // Guardar para UI (puntos)
+                const nivel = ind.niveles_respuesta.find(n => n.id_nivel_respuesta === savedNivelId)
+                if (nivel) {
+                  const key = `${cap.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+                  responsesMap[key] = nivel.puntos
+                }
+              }
+            })
+          })
+          setResponses(responsesMap)
+          setResponsesForApi(apiResponsesMap)
+          console.log(`✅ Cargadas ${Object.keys(apiResponsesMap).length} respuestas guardadas (únicas)`)
+        }
+
+        setIsSelectingSegment(false)
+      }
+    } catch (error) {
+      console.error('Error al continuar autoevaluación:', error)
+      setLoadError(error instanceof Error ? error.message : 'Error al cargar la autoevaluación pendiente')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Manejar cancelar autoevaluación pendiente y crear nueva
+  const handleCancelPending = async () => {
+    if (!pendingInfo || !idBodega) return
+
+    const autoId = String(pendingInfo.id)
+    console.log('Cancelando autoevaluación:', autoId)
+
+    setShowPendingDialog(false)
+    setIsLoading(true)
+
+    try {
+      // Llamar al endpoint para cancelar la autoevaluación pendiente
+      await cancelarAutoevaluacion(autoId)
+    } catch (error) {
+      console.error('Error al cancelar autoevaluación:', error)
+      // Continuar aunque falle el cancelar
+    }
+
+    // Limpiar info pendiente y recargar página para crear nueva
+    setPendingInfo(null)
+    setSavedResponses([])
+
+    // Crear nueva autoevaluación
+    try {
+      const result = await crearAutoevaluacion(idBodega)
+      const { data } = result
+      const auto = data.autoevaluacion_pendiente
+      const autoNewId = String(auto.id_autoevaluacion)
+
+      setAssessmentId(autoNewId)
+      const segmentosData = await obtenerSegmentos(autoNewId)
+      setSegmentos(segmentosData)
+      setIsSelectingSegment(true)
+    } catch (error) {
+      console.error('Error al crear nueva autoevaluación:', error)
+      setLoadError(error instanceof Error ? error.message : 'Error al crear la autoevaluación')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Verificar si se puede finalizar
   useEffect(() => {
     if (estructura.length === 0) return
 
-    // Contar solo indicadores habilitados
     const totalIndicadoresHabilitados = estructura.reduce(
       (acc, cap) => acc + cap.indicadores.filter(ind => ind.habilitado).length,
       0
@@ -106,89 +274,120 @@ export default function AutoevaluacionPage() {
     setCanFinalize(completedIndicators === totalIndicadoresHabilitados && totalIndicadoresHabilitados > 0)
   }, [responses, estructura])
 
-  const handleSelectIndicator = (capitulo: CapituloEstructura, indicador: IndicadorEstructura) => {
-    // Solo permitir selección de indicadores habilitados
-    if (!indicador.habilitado) return
+  // Manejar cambio de respuesta
+  const handleResponseChange = async (indicador: IndicadorEstructura, newLevel: number, newNivelId: number) => {
+    if (!assessmentId || !currentCapitulo) return
 
-    setCurrentCapitulo(capitulo)
-    setCurrentIndicador(indicador)
-    const key = `${capitulo.capitulo.id_capitulo}-${indicador.indicador.id_indicador}`
-    setSelectedLevel(responses[key] ?? null)
-    setSelectedNivelRespuestaId(null)
-  }
+    const key = `${currentCapitulo.capitulo.id_capitulo}-${indicador.indicador.id_indicador}`
 
-  const handleSaveResponse = async () => {
-    if (!currentCapitulo || !currentIndicador || selectedLevel === null || selectedNivelRespuestaId === null || !currentIndicador.habilitado || !assessmentId) {
+    // Actualizar estado para UI (puntos)
+    setResponses(prev => ({
+      ...prev,
+      [key]: newLevel
+    }))
+
+    // Actualizar estado para API (id_indicador -> id_nivel_respuesta)
+    const updatedApiResponses = {
+      ...responsesForApi,
+      [indicador.indicador.id_indicador]: newNivelId
+    }
+    setResponsesForApi(updatedApiResponses)
+
+    // Convertir a array y enviar TODAS las respuestas
+    const respuestasArray = Object.entries(updatedApiResponses).map(([idIndicador, idNivelRespuesta]) => ({
+      id_indicador: parseInt(idIndicador),
+      id_nivel_respuesta: idNivelRespuesta
+    }))
+
+    // Verificar que no haya duplicados (seguridad adicional)
+    const indicadoresIds = respuestasArray.map(r => r.id_indicador)
+    const hasDuplicates = indicadoresIds.length !== new Set(indicadoresIds).size
+    if (hasDuplicates) {
+      console.error('⚠️ ERROR: Respuestas duplicadas detectadas:', indicadoresIds)
+      // No debería pasar nunca con un objeto, pero por seguridad
       return
     }
 
-    setIsSaving(true)
+    console.log('=== GUARDANDO RESPUESTAS ===')
+    console.log('Total a enviar:', respuestasArray.length)
+    console.log('Respuestas:', respuestasArray)
 
     try {
-      // Guardar respuesta en el backend
-      await guardarRespuesta(
-        assessmentId,
-        currentIndicador.indicador.id_indicador,
-        selectedNivelRespuestaId
-      )
-
-      // Guardar respuesta localmente para UI
-      const key = `${currentCapitulo.capitulo.id_capitulo}-${currentIndicador.indicador.id_indicador}`
-      setResponses(prev => ({
-        ...prev,
-        [key]: selectedLevel
-      }))
-
-      // Avanzar al siguiente indicador habilitado
-      avanzarAlSiguienteIndicador()
+      await guardarRespuestas(assessmentId, respuestasArray)
+      console.log(`✅ Guardadas ${respuestasArray.length} respuestas exitosamente`)
     } catch (error) {
-      console.error('Error al guardar respuesta:', error)
-      alert(error instanceof Error ? error.message : 'Error al guardar la respuesta')
-    } finally {
-      setIsSaving(false)
+      console.error('❌ Error al guardar respuestas:', error)
     }
   }
 
-  const avanzarAlSiguienteIndicador = () => {
-    if (!currentCapitulo || !currentIndicador) return
+  // Verificar si el capítulo actual está completo
+  const isCurrentChapterComplete = (): boolean => {
+    if (!currentCapitulo) return false
 
-    // Buscar el siguiente indicador habilitado
-    const currentCapIndex = estructura.findIndex(c => c.capitulo.id_capitulo === currentCapitulo.capitulo.id_capitulo)
-    const currentIndIndex = currentCapitulo.indicadores.findIndex(i => i.indicador.id_indicador === currentIndicador.indicador.id_indicador)
+    const indicadoresHabilitados = currentCapitulo.indicadores.filter(ind => ind.habilitado)
+    const indicadoresRespondidos = indicadoresHabilitados.filter(ind => {
+      const key = `${currentCapitulo.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+      return responses[key] !== undefined
+    })
 
-    // Buscar en los indicadores restantes del capítulo actual
-    for (let i = currentIndIndex + 1; i < currentCapitulo.indicadores.length; i++) {
-      if (currentCapitulo.indicadores[i].habilitado) {
-        setCurrentIndicador(currentCapitulo.indicadores[i])
-        setSelectedLevel(null)
-        setSelectedNivelRespuestaId(null)
+    return indicadoresRespondidos.length === indicadoresHabilitados.length
+  }
+
+  // Navegación de Capítulos
+  const cambiarCapitulo = (direction: 'next' | 'prev') => {
+    if (!currentCapitulo) return
+    const currentIndex = estructura.findIndex(c => c.capitulo.id_capitulo === currentCapitulo.capitulo.id_capitulo)
+    if (currentIndex === -1) return
+
+    // Validar que el capítulo actual esté completo antes de avanzar
+    if (direction === 'next') {
+      if (!isCurrentChapterComplete()) {
+        const indicadoresHabilitados = currentCapitulo.indicadores.filter(ind => ind.habilitado)
+        const indicadoresRespondidos = indicadoresHabilitados.filter(ind => {
+          const key = `${currentCapitulo.capitulo.id_capitulo}-${ind.indicador.id_indicador}`
+          return responses[key] !== undefined
+        })
+        const faltantes = indicadoresHabilitados.length - indicadoresRespondidos.length
+        alert(`Debes completar todos los indicadores de este capítulo antes de continuar.\n\nFaltan ${faltantes} indicador(es) por responder.`)
         return
       }
-    }
 
-    // Buscar en los capítulos siguientes
-    for (let c = currentCapIndex + 1; c < estructura.length; c++) {
-      for (const ind of estructura[c].indicadores) {
-        if (ind.habilitado) {
-          setCurrentCapitulo(estructura[c])
-          setCurrentIndicador(ind)
-          setSelectedLevel(null)
-          setSelectedNivelRespuestaId(null)
-          return
-        }
+      if (currentIndex < estructura.length - 1) {
+        setCurrentCapitulo(estructura[currentIndex + 1])
+        window.scrollTo(0, 0)
       }
+    } else if (direction === 'prev' && currentIndex > 0) {
+      setCurrentCapitulo(estructura[currentIndex - 1])
+      window.scrollTo(0, 0)
     }
   }
 
   const handleFinalizeAssessment = async () => {
     if (!assessmentId) return
-
     setIsFinalizing(true)
-
     try {
       await completarAutoevaluacion(assessmentId)
-      alert('¡Autoevaluación completada exitosamente!')
-      router.push('/dashboard')
+
+      // Calcular el puntaje total locamente
+      const totalScore = Object.values(responses).reduce((acc, puntos) => acc + puntos, 0)
+      const maxScore = estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
+        const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
+        return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
+      }, 0), 0)
+      const porcentaje = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
+
+      // Guardar en localStorage para la página de resultados
+      const resultData = {
+        assessmentId,
+        puntaje_final: totalScore,
+        puntaje_maximo: maxScore,
+        porcentaje,
+        fecha_completo: new Date().toISOString(),
+        segmento: selectedSegment?.nombre || 'N/A'
+      }
+      localStorage.setItem(`resultado_${assessmentId}`, JSON.stringify(resultData))
+
+      setShowSuccessDialog(true)
     } catch (error) {
       console.error('Error al finalizar:', error)
       alert(error instanceof Error ? error.message : 'Error al finalizar la autoevaluación')
@@ -214,32 +413,22 @@ export default function AutoevaluacionPage() {
   }
 
   const handleSelectSegment = async (segmento: Segmento) => {
-    if (!assessmentId) return
-
-    // Si ya tenemos estructura cargada, confirmar cambio. Si no (primera vez), proceder directamente.
+    const currentId = assessmentId || (pendingInfo ? String(pendingInfo.id) : null)
+    if (!currentId) return
     if (estructura.length > 0) {
       if (!confirm(`¿Desea cambiar al segmento "${segmento.nombre}"? Esto recargará la estructura de la evaluación.`)) return
     }
 
     setIsLoading(true)
     try {
-      await seleccionarSegmento(assessmentId, segmento.id_segmento)
-
-      // Actualizar estado del segmento seleccionado
+      await seleccionarSegmento(currentId, segmento.id_segmento)
       setSelectedSegment(segmento)
-
-      // Cargar estructura después de seleccionar segmento
-      const response = await obtenerEstructuraAutoevaluacion(assessmentId)
+      setAssessmentId(currentId) // Asegurar que assessmentId esté seteado
+      const response = await obtenerEstructuraAutoevaluacion(currentId)
       setEstructura(response.capitulos)
-
-      // Inicializar selección
       if (response.capitulos.length > 0) {
-        const primerCapitulo = response.capitulos[0]
-        setCurrentCapitulo(primerCapitulo)
-        const primerIndicador = primerCapitulo.indicadores.find(ind => ind.habilitado) || primerCapitulo.indicadores[0]
-        setCurrentIndicador(primerIndicador)
+        setCurrentCapitulo(response.capitulos[0])
       }
-
       setIsSelectingSegment(false)
     } catch (error) {
       console.error('Error al procesar segmento:', error)
@@ -249,7 +438,6 @@ export default function AutoevaluacionPage() {
     }
   }
 
-  // Estado de carga
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -261,7 +449,6 @@ export default function AutoevaluacionPage() {
     )
   }
 
-  // Estado de error
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -283,162 +470,185 @@ export default function AutoevaluacionPage() {
     )
   }
 
-  // Bypass de chequeo de datos si estamos seleccionando segmento
-  if (!isSelectingSegment && (!currentCapitulo || !currentIndicador)) {
+  if (!isSelectingSegment && !currentCapitulo) {
     return <div className="p-8">No hay datos disponibles</div>
   }
 
-  const isResponseSaved = (capituloId: number, indicadorId: number) => {
-    return `${capituloId}-${indicadorId}` in responses
-  }
-
-  // Verificar si es el último indicador habilitado
-  const ultimoCapitulo = estructura[estructura.length - 1]
-  const ultimosIndicadoresHabilitados = ultimoCapitulo?.indicadores.filter(ind => ind.habilitado) || []
-  const ultimoIndicadorHabilitado = ultimosIndicadoresHabilitados[ultimosIndicadoresHabilitados.length - 1]
-  const isLastIndicator =
-    currentCapitulo?.capitulo.id_capitulo === ultimoCapitulo?.capitulo.id_capitulo &&
-    currentIndicador?.indicador.id_indicador === ultimoIndicadorHabilitado?.indicador.id_indicador
-
   return (
-    <div className="flex h-full">
-      {/* Left sidebar with chapters and indicators */}
-      <div className="w-80 border-r bg-card">
-        <div className="p-4 border-b bg-primary flex justify-between items-center">
-          <h2 className="font-semibold text-primary-foreground">Autoevaluación</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleOpenSegmentSelector}
-            className="text-primary-foreground hover:bg-primary-foreground/20"
-            title="Cambiar Segmento"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-        <ScrollArea className="h-[calc(100vh-8rem)]">
-          <div className="p-4 space-y-4">
-            {estructura.map((capitulo) => (
-              <div key={capitulo.capitulo.id_capitulo} className="space-y-2">
-                <h3 className="font-semibold text-sm">{capitulo.capitulo.nombre}</h3>
-                <div className="space-y-1">
-                  {capitulo.indicadores.map((indicadorWrapper) => {
-                    const isActive =
-                      currentCapitulo?.capitulo.id_capitulo === capitulo.capitulo.id_capitulo &&
-                      currentIndicador?.indicador.id_indicador === indicadorWrapper.indicador.id_indicador
-                    const isSaved = isResponseSaved(capitulo.capitulo.id_capitulo, indicadorWrapper.indicador.id_indicador)
-                    const isDisabled = !indicadorWrapper.habilitado
-
-                    return (
-                      <button
-                        key={indicadorWrapper.indicador.id_indicador}
-                        onClick={() => handleSelectIndicator(capitulo, indicadorWrapper)}
-                        disabled={isDisabled}
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between transition-colors ${isDisabled
-                          ? "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground"
-                          : isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted"
-                          }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          {isDisabled ? (
-                            <Ban className="w-4 h-4 text-muted-foreground" />
-                          ) : isSaved ? (
-                            <Check className="w-4 h-4 text-primary" />
-                          ) : null}
-                          {indicadorWrapper.indicador.nombre}
-                        </span>
-                        {!isDisabled && <ChevronRight className="w-4 h-4" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Right content area */}
+    <div className="flex h-full flex-col">
       <div className="flex-1 p-8 space-y-6">
-        {/* Progress Dashboard */}
         {!isSelectingSegment && estructura.length > 0 && (
-          <div className="bg-zinc-900 text-white p-4 rounded-lg shadow-md flex items-center justify-between gap-6">
-            <div className="flex gap-8">
-              <div>
-                <div className="text-xs text-zinc-400 uppercase font-semibold">Categoría</div>
-                <div className="font-bold text-lg leading-tight">
-                  {selectedSegment?.nombre.split(' ')[0] || "General"}
+          <div className="bg-muted border border-border p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 w-full md:w-auto">
+              <div className="flex items-center gap-3 justify-between sm:justify-start w-full sm:w-auto">
+                <div className="flex-1 sm:flex-initial">
+                  <div className="text-xs text-muted-foreground uppercase font-semibold">Categoría</div>
+                  <div className="font-bold text-lg leading-tight text-foreground truncate">
+                    {selectedSegment?.nombre.split(' ')[0] || "General"}
+                  </div>
                 </div>
+                <Button variant="ghost" size="icon" onClick={handleOpenSegmentSelector} className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0" title="Cambiar Segmento">
+                  <Settings className="h-4 w-4" />
+                </Button>
               </div>
 
-              <div className="border-l border-zinc-700 pl-6">
-                <div className="text-xs text-zinc-400 uppercase font-semibold">Indicadores a evaluar</div>
-                <div className="font-bold text-lg leading-tight">
-                  {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0)}
-                </div>
-              </div>
+              <div className="flex gap-6 sm:border-l sm:border-border sm:pl-6 justify-between sm:justify-start overflow-x-auto pb-2 sm:pb-0">
+                 <div className="whitespace-nowrap">
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">Indicadores</div>
+                    <div className="font-bold text-lg leading-tight text-foreground">
+                      {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0)}
+                    </div>
+                 </div>
+                 
+                 <div className="whitespace-nowrap border-l border-border pl-6">
+                   <div className="text-xs text-muted-foreground uppercase font-semibold">Máx Puntos</div>
+                   <div className="font-bold text-lg leading-tight text-foreground">
+                     {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
+                       const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
+                       return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
+                     }, 0), 0)}
+                   </div>
+                 </div>
 
-              <div className="border-l border-zinc-700 pl-6">
-                <div className="text-xs text-zinc-400 uppercase font-semibold">Puntuación máxima</div>
-                <div className="font-bold text-lg leading-tight">
-                  {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
-                    const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
-                    return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
-                  }, 0), 0)} puntos
-                </div>
+                 <div className="whitespace-nowrap border-l border-border pl-6">
+                   <div className="text-xs text-muted-foreground uppercase font-semibold">Tu Puntaje</div>
+                   <div className="font-bold text-lg leading-tight bg-gradient-to-r from-coviar-borravino to-coviar-red bg-clip-text text-transparent">
+                     {Object.values(responses).reduce((acc, puntos) => acc + puntos, 0)}
+                   </div>
+                 </div>
               </div>
             </div>
 
-            <div className="flex-1 max-w-xl">
-              <div className="text-xs text-zinc-400 mb-2">Progreso general</div>
-              <div className="h-2 w-full bg-zinc-700 rounded-full overflow-hidden">
+            <div className="flex-1 w-full md:max-w-xs lg:max-w-sm xl:max-w-md">
+              <div className="text-xs text-muted-foreground mb-2 flex justify-between">
+                <span>Progreso</span>
+                <span>{Math.round((Object.keys(responses).length / Math.max(1, estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0))) * 100)}%</span>
+              </div>
+              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-orange-400 to-yellow-400"
+                  className="h-full bg-gradient-to-r from-coviar-borravino to-coviar-red transition-all duration-500 ease-out"
                   style={{ width: `${(Object.keys(responses).length / Math.max(1, estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0))) * 100}%` }}
                 ></div>
-              </div>
-              <div className="flex justify-between text-xs text-zinc-400 mt-1">
-                <span>
-                  {Object.keys(responses).length} de {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0)} evaluados • {Object.values(responses).reduce((a, b) => a + b, 0)} / {estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).reduce((sum, ind) => {
-                    const maxPuntos = Math.max(...ind.niveles_respuesta.map(n => n.puntos))
-                    return sum + (isFinite(maxPuntos) ? maxPuntos : 0)
-                  }, 0), 0)} puntos
-                </span>
-                <span>{Math.round((Object.keys(responses).length / Math.max(1, estructura.reduce((acc, cap) => acc + cap.indicadores.filter(i => i.habilitado).length, 0))) * 100)}%</span>
               </div>
             </div>
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            {isSelectingSegment ? (
+        {!isSelectingSegment && currentCapitulo && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold text-primary mb-2">{currentCapitulo.capitulo.nombre}</h2>
+              {currentCapitulo.capitulo.descripcion && (
+                <p className="text-muted-foreground">{currentCapitulo.capitulo.descripcion}</p>
+              )}
+            </div>
+
+            {currentCapitulo.indicadores.filter(i => i.habilitado).map((indicadorWrapper, index) => {
+              const key = `${currentCapitulo.capitulo.id_capitulo}-${indicadorWrapper.indicador.id_indicador}`
+              const savedValue = responses[key]
+
+              return (
+                <Card key={indicadorWrapper.indicador.id_indicador} className="border-l-4 border-l-primary/20">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-start gap-2">
+                      <span className="bg-primary/10 text-primary text-sm font-bold px-2 py-1 rounded">
+                        {index + 1}
+                      </span>
+                      {indicadorWrapper.indicador.nombre}
+                    </CardTitle>
+                    <CardDescription className="text-balance mt-2">
+                      {indicadorWrapper.indicador.descripcion}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RadioGroup
+                      value={savedValue?.toString()}
+                      onValueChange={(v: string) => {
+                        const nivel = indicadorWrapper.niveles_respuesta.find(n => n.puntos.toString() === v)
+                        if (nivel) {
+                          handleResponseChange(indicadorWrapper, nivel.puntos, nivel.id_nivel_respuesta)
+                        }
+                      }}
+                      className="space-y-3"
+                    >
+                      {indicadorWrapper.niveles_respuesta.map((nivel) => (
+                        <div
+                          key={nivel.id_nivel_respuesta}
+                          className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${savedValue === nivel.puntos
+                            ? "bg-primary/5 border-primary"
+                            : "hover:bg-muted/50"
+                            }`}
+                        >
+                          <RadioGroupItem value={nivel.puntos.toString()} id={`ind-${indicadorWrapper.indicador.id_indicador}-lvl-${nivel.id_nivel_respuesta}`} className="mt-1" />
+                          <Label htmlFor={`ind-${indicadorWrapper.indicador.id_indicador}-lvl-${nivel.id_nivel_respuesta}`} className="font-normal cursor-pointer w-full">
+                            <div className="font-medium text-foreground">{nivel.nombre}</div>
+                            {nivel.descripcion && (
+                              <div className="text-sm text-muted-foreground mt-1 text-pretty">{nivel.descripcion}</div>
+                            )}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              )
+            })}
+
+            <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 pt-8 border-t">
+              <Button
+                variant="outline"
+                onClick={() => cambiarCapitulo('prev')}
+                disabled={estructura.findIndex(c => c.capitulo.id_capitulo === currentCapitulo.capitulo.id_capitulo) === 0}
+                className="w-full sm:w-auto"
+              >
+                Anterior Capítulo
+              </Button>
+
+              {estructura.findIndex(c => c.capitulo.id_capitulo === currentCapitulo.capitulo.id_capitulo) === estructura.length - 1 ? (
+                <Button
+                  onClick={handleFinalizeAssessment}
+                  disabled={!canFinalize || isFinalizing}
+                  className="bg-coviar-borravino hover:bg-coviar-borravino-dark text-white w-full sm:w-auto"
+                >
+                  {isFinalizing ? "Finalizando..." : "Finalizar Autoevaluación"}
+                </Button>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                  {!isCurrentChapterComplete() && (
+                    <span className="text-sm text-amber-600 flex items-center gap-1 order-2 sm:order-1 text-center sm:text-left">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      Completa todos los indicadores
+                    </span>
+                  )}
+                  <Button
+                    onClick={() => cambiarCapitulo('next')}
+                    disabled={!isCurrentChapterComplete()}
+                    className={`${!isCurrentChapterComplete() ? "opacity-50" : ""} w-full sm:w-auto order-1 sm:order-2`}
+                  >
+                    Siguiente Capítulo
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isSelectingSegment && (
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-6 w-6" />
                 Seleccionar Segmento de Enoturismo
               </CardTitle>
-            ) : (
-              <>
-                <CardTitle className="text-balance">
-                  {currentCapitulo?.capitulo.nombre} - {currentIndicador?.indicador.nombre}
-                </CardTitle>
-                <CardDescription className="text-balance">
-                  {currentIndicador?.indicador.descripcion}
-                </CardDescription>
-              </>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isSelectingSegment ? (
-              loadingSegmentos ? (
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {loadingSegmentos ? (
                 <div className="text-center p-8">Cargando segmentos...</div>
               ) : (
                 <div className="grid gap-4">
                   <div className="bg-blue-50 p-4 rounded-md text-blue-800 text-sm mb-4">
                     Seleccione el segmento que mejor describa su bodega según la cantidad de turistas que recibe anualmente.
-                    Esto adaptará los indicadores de la autoevaluación a su realidad.
                   </div>
                   {segmentos.map((seg) => (
                     <Card
@@ -464,81 +674,145 @@ export default function AutoevaluacionPage() {
                     </Button>
                   )}
                 </div>
-              )
-            ) : !currentIndicador?.habilitado ? (
-              <div className="p-6 bg-muted/30 rounded-lg border border-dashed text-center">
-                <Ban className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground font-medium">Indicador no aplicable</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Este indicador no es pertinente para tu segmento.
-                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Diálogo de Autoevaluación Pendiente */}
+      <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+          {/* Header con gradiente */}
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5 text-white">
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                <Clock className="h-6 w-6 text-white" />
               </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <RadioGroup
-                    value={selectedLevel?.toString()}
-                    onValueChange={(v) => {
-                      const nivel = currentIndicador?.niveles_respuesta.find(n => n.puntos.toString() === v)
-                      if (nivel) {
-                        setSelectedLevel(nivel.puntos)
-                        setSelectedNivelRespuestaId(nivel.id_nivel_respuesta)
-                      }
-                    }}
-                    className="space-y-4"
-                  >
-                    {currentIndicador?.niveles_respuesta.map((nivel) => (
-                      <div
-                        key={nivel.id_nivel_respuesta}
-                        onClick={() => {
-                          setSelectedLevel(nivel.puntos)
-                          setSelectedNivelRespuestaId(nivel.id_nivel_respuesta)
-                        }}
-                        className={`p-4 border rounded-lg transition-colors cursor-pointer ${selectedLevel === nivel.puntos
-                          ? "bg-primary/10 border-primary ring-2 ring-primary"
-                          : "bg-muted/30 hover:bg-muted/50 hover:border-primary/50"
-                          }`}
-                      >
-                        <RadioGroupItem
-                          value={nivel.puntos.toString()}
-                          id={`nivel-${nivel.id_nivel_respuesta}`}
-                          className="sr-only"
-                        />
-                        <Label htmlFor={`nivel-${nivel.id_nivel_respuesta}`} className="cursor-pointer block">
-                          <div className="font-semibold mb-2">{nivel.nombre}</div>
-                          {nivel.descripcion && (
-                            <div className="text-sm text-muted-foreground text-pretty">{nivel.descripcion}</div>
-                          )}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+              <div className="text-center">
+                <DialogTitle className="text-xl font-bold text-white">
+                  Autoevaluación Pendiente
+                </DialogTitle>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenido */}
+          <div className="px-6 py-5 space-y-4">
+            {pendingInfo && (
+              <div className="space-y-3">
+                {/* Fecha de inicio */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                    <span className="text-lg">📅</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Fecha de inicio</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {new Date(pendingInfo.fechaInicio).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
                 </div>
 
-                <Button
-                  onClick={handleSaveResponse}
-                  disabled={selectedLevel === null || isSaving}
-                  className="w-full"
-                >
-                  {isSaving ? "Guardando..." : "Guardar y Continuar"}
-                </Button>
-
-                {isLastIndicator && canFinalize && (
-                  <Button
-                    onClick={handleFinalizeAssessment}
-                    disabled={isFinalizing}
-                    variant="default"
-                    size="lg"
-                    className="w-full bg-[#81242d] hover:bg-[#6D1A1A]"
-                  >
-                    {isFinalizing ? "Finalizando..." : "Finalizar Autoevaluación"}
-                  </Button>
-                )}
-              </>
+                {/* Estado del segmento/respuestas */}
+                <div className={`flex items-center gap-3 p-3 rounded-lg border ${!pendingInfo.tieneSegmento
+                  ? 'bg-amber-50 border-amber-200'
+                  : pendingInfo.cantidadRespuestas === 0
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-green-50 border-green-200'
+                  }`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${!pendingInfo.tieneSegmento
+                    ? 'bg-amber-100'
+                    : pendingInfo.cantidadRespuestas === 0
+                      ? 'bg-blue-100'
+                      : 'bg-green-100'
+                    }`}>
+                    <span className="text-lg">
+                      {!pendingInfo.tieneSegmento ? '⚠️' : pendingInfo.cantidadRespuestas === 0 ? '📊' : '📝'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Estado</p>
+                    <p className={`text-sm font-semibold ${!pendingInfo.tieneSegmento
+                      ? 'text-amber-700'
+                      : pendingInfo.cantidadRespuestas === 0
+                        ? 'text-blue-700'
+                        : 'text-green-700'
+                      }`}>
+                      {!pendingInfo.tieneSegmento
+                        ? 'Sin segmento seleccionado'
+                        : pendingInfo.cantidadRespuestas === 0
+                          ? 'Segmento seleccionado - Sin respuestas'
+                          : `${pendingInfo.cantidadRespuestas} respuestas guardadas`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </div >
+
+            {/* Mensaje informativo */}
+            <p className="text-center text-sm text-gray-600 py-2">
+              {!pendingInfo?.tieneSegmento
+                ? "Para continuar, debes seleccionar un segmento."
+                : pendingInfo.cantidadRespuestas > 0
+                  ? "Tienes respuestas guardadas que se cargarán automáticamente."
+                  : "Puedes continuar respondiendo el cuestionario."
+              }
+            </p>
+          </div>
+
+          {/* Footer con botones */}
+          <div className="px-6 py-4 bg-gray-50 border-t flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              variant="outline"
+              onClick={handleCancelPending}
+              className="order-2 sm:order-1 border-gray-300 bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+            >
+              {pendingInfo?.cantidadRespuestas && pendingInfo.cantidadRespuestas > 0
+                ? "Cancelar y Perder Respuestas"
+                : "Cancelar y Crear Nueva"}
+            </Button>
+            <Button
+              onClick={handleContinuePending}
+              className="order-1 sm:order-2 bg-coviar-borravino hover:bg-coviar-borravino-dark text-white font-medium"
+            >
+              {!pendingInfo?.tieneSegmento
+                ? "Seleccionar Segmento"
+                : "Continuar Autoevaluación"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-4">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">¡Autoevaluación completada!</DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Has finalizado exitosamente el proceso de autoevaluación.
+              Tus respuestas han sido guardadas correctamente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center pt-4">
+            <Button
+              className="bg-coviar-borravino hover:bg-coviar-borravino-dark min-w-[150px]"
+              onClick={() => router.push(`/dashboard/resultados/${assessmentId}`)}
+            >
+              Ver Resultados
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

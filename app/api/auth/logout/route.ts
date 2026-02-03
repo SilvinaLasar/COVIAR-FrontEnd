@@ -4,9 +4,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export async function POST(request: NextRequest) {
     try {
-        console.log('Proxy Logout: Enviando logout a', `${API_BASE_URL}/api/v1/auth/logout`)
+        console.log('Proxy Logout: Enviando logout a', `${API_BASE_URL}/api/logout`)
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+        const response = await fetch(`${API_BASE_URL}/api/logout`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

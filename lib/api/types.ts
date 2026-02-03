@@ -36,7 +36,7 @@ export interface Usuario {
 // ============= AUTENTICACIÓN =============
 
 export interface LoginRequest {
-  email: string
+  email_login: string
   password: string
 }
 
@@ -106,12 +106,74 @@ export interface Autoevaluacion {
   respuestas: Record<string, unknown>
 }
 
+export interface AutoevaluacionPendiente {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  estado: string
+  id_bodega: number
+  id_segmento: number | null
+  puntaje_final: number | null
+  id_nivel_sostenibilidad: number | null
+}
+
+export interface RespuestaGuardada {
+  id_indicador: number
+  id_nivel_respuesta: number
+}
+
+export interface CrearAutoevaluacionResponse {
+  autoevaluacion_pendiente: AutoevaluacionPendiente
+  respuestas: RespuestaGuardada[]
+  mensaje: string
+}
+
+// Legacy type for backwards compatibility
 export interface AutoevaluacionCreada {
   id_autoevaluacion: number
   fecha_inicio: string
   estado: string
   id_bodega: number
   id_version: number
+}
+
+// ============= HISTORIAL Y RESULTADOS =============
+
+export interface AutoevaluacionHistorial {
+  id_autoevaluacion: number
+  fecha_inicio: string
+  fecha_finalizacion?: string
+  estado: 'pendiente' | 'completada' | 'cancelada'
+  id_bodega: number
+  id_segmento: number | null
+  puntaje_final: number | null
+  puntaje_maximo: number | null
+  porcentaje: number | null
+  id_nivel_sostenibilidad: number | null
+  nivel_sostenibilidad?: {
+    id: number
+    nombre: string
+    descripcion?: string
+  }
+}
+
+export interface ResultadoCapitulo {
+  id_capitulo: number
+  nombre: string
+  puntaje_obtenido: number
+  puntaje_maximo: number
+  porcentaje: number
+  indicadores_completados: number
+  indicadores_total: number
+}
+
+export interface ResultadoDetallado {
+  autoevaluacion: AutoevaluacionHistorial
+  capitulos: ResultadoCapitulo[]
+  comparativa?: {
+    evaluacion_anterior?: AutoevaluacionHistorial
+    diferencia_puntaje: number
+    diferencia_porcentaje: number
+  }
 }
 
 export interface RespuestaIndicador {
@@ -130,6 +192,7 @@ export interface Capitulo {
   id_version: number
   nombre: string
   descripcion?: string
+  orden: number
 }
 
 export interface Indicador {
@@ -137,6 +200,7 @@ export interface Indicador {
   id_capitulo: number
   nombre: string
   descripcion: string
+  orden: number
 }
 
 export interface NivelRespuesta {
@@ -150,7 +214,7 @@ export interface NivelRespuesta {
 export interface IndicadorEstructura {
   indicador: Indicador
   niveles_respuesta: NivelRespuesta[]
-  habilitado: boolean
+  habilitado?: boolean
 }
 
 export interface CapituloEstructura {
