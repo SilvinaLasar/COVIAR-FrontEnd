@@ -157,6 +157,17 @@ export interface AutoevaluacionHistorial {
   }
 }
 
+export interface ResultadoIndicadorDetalle {
+  id_indicador: number
+  nombre: string
+  descripcion: string
+  orden: number
+  respuesta_nombre: string
+  respuesta_descripcion: string
+  respuesta_puntos: number
+  puntaje_maximo: number
+}
+
 export interface ResultadoCapitulo {
   id_capitulo: number
   nombre: string
@@ -165,6 +176,7 @@ export interface ResultadoCapitulo {
   porcentaje: number
   indicadores_completados: number
   indicadores_total: number
+  indicadores?: ResultadoIndicadorDetalle[]
 }
 
 export interface ResultadoDetallado {
