@@ -247,7 +247,7 @@ export function EvidenciaUpload({
                     variant="outline"
                     size="sm"
                     onClick={handleClickUpload}
-                    className="gap-2 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                    className="gap-2 text-muted-foreground hover:text-primary hover:border-primary transition-colors border-[#880D1E]"
                 >
                     <Upload className="h-4 w-4" />
                     Adjuntar evidencia (PDF)

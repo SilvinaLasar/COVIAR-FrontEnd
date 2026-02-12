@@ -62,46 +62,65 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      {/* Header */}
-      <div>
+    <div className="min-h-screen">
+      {/* Header sin fondo */}
+      <div className="p-8 pb-4">
         <h1 className="text-3xl font-bold">
-          Bienvenido, {usuario.responsable?.nombre} {usuario.responsable?.apellido}
+          Bienvenido/a, {usuario.responsable?.nombre} {usuario.responsable?.apellido}
         </h1>
         <p className="text-muted-foreground">
           {usuario.bodega?.nombre_fantasia} — Panel de control de sostenibilidad enoturística COVIAR
         </p>
       </div>
 
-
-      {/* Banner de Acceso Principal */}
-      <div className="space-y-12 max-w-5xl mx-auto pb-12">
-        {/* Título Principal */}
-        <div className="text-center space-y-4">
-          <h2 className="text-4xl md:text-5xl font-bold font-serif text-coviar-borravino tracking-tight uppercase">
-            Guía de Autoevaluación
-            <span className="block text-foreground mt-2 font-sans font-black">Sostenibilidad Enoturística Argentina</span>
-          </h2>
-          <p className="text-muted-foreground font-medium tracking-widest uppercase">
-            #PEVI2030 El Plan de la Vitivinicultura Argentina
-          </p>
+      {/* Banner de Acceso Principal con Fondo de Botellas de Vino */}
+      <div className="relative min-h-[calc(100vh-120px)] flex items-center">
+        {/* Imagen de Fondo */}
+        <div className="absolute inset-0 z-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src="/assets/wine-bottles-background.jpg" 
+            alt="Bodega de Vinos" 
+            className="w-full h-full object-cover"
+          />
+          {/* Overlay con degradado más claro para imagen oscura */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/92 via-white/88 to-white/92"></div>
         </div>
 
+        {/* Contenido */}
+        <div className="relative z-10 w-full py-16 px-8">
+          <div className="space-y-12 max-w-5xl mx-auto">
+            {/* Título Principal */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-bold font-serif text-coviar-borravino tracking-tight uppercase drop-shadow-sm">
+                Guía de Autoevaluación
+                <span className="block text-foreground mt-2 font-sans font-black">Sostenibilidad Enoturística Argentina</span>
+              </h2>
+              <p className="text-muted-foreground font-medium tracking-widest uppercase">
+                #PEVI2030 El Plan de la Vitivinicultura Argentina
+              </p>
+            </div>
+
         {/* ¿Qué es? */}
-        <div className="bg-muted/30 p-8 rounded-2xl border border-border/50 text-center space-y-4">
-          <h3 className="text-2xl font-bold text-foreground">
-            ¿Qué es la Guía de Evaluación de la Sostenibilidad Enoturística?
-          </h3>
-          <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-            Es un instrumento de evaluación y gestión que permite a las bodegas abiertas al turismo
-            <span className="font-semibold text-foreground"> medir, ordenar y mejorar</span> su desempeño en sostenibilidad enoturística,
-            considerando las dimensiones <span className="font-semibold text-foreground">ambiental, social y económica</span>.
-          </p>
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#B89B5E]/30 to-[#d4b76f]/30 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition duration-300"></div>
+          <div className="relative bg-white/98 backdrop-blur-md p-8 rounded-2xl border-2 border-[#B89B5E]/30 shadow-2xl text-center space-y-4">
+            <h3 className="text-2xl font-bold text-foreground">
+              ¿Qué es la Guía de Evaluación de la Sostenibilidad Enoturística?
+            </h3>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+              Es un instrumento de evaluación y gestión que permite a las bodegas abiertas al turismo
+              <span className="font-semibold text-foreground"> medir, ordenar y mejorar</span> su desempeño en sostenibilidad enoturística,
+              considerando las dimensiones <span className="font-semibold text-foreground">ambiental, social y económica</span>.
+            </p>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* ¿Para qué sirve? */}
-          <Card className="border-l-4 border-l-coviar-borravino shadow-sm">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#880D1E]/20 to-[#a81028]/20 rounded-lg blur-lg opacity-40 group-hover:opacity-60 transition duration-300"></div>
+            <Card className="relative bg-white/98 backdrop-blur-md border-l-4 border-l-coviar-borravino shadow-lg hover:shadow-2xl transition-all duration-300">
             <CardHeader>
               <CardTitle className="text-xl font-bold">¿Para qué sirve?</CardTitle>
             </CardHeader>
@@ -129,10 +148,13 @@ export default function DashboardPage() {
                 </li>
               </ul>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
 
           {/* ¿Qué beneficios aporta? */}
-          <Card className="border-l-4 border-l-coviar-borravino shadow-sm">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#880D1E]/20 to-[#a81028]/20 rounded-lg blur-lg opacity-40 group-hover:opacity-60 transition duration-300"></div>
+            <Card className="relative bg-white/98 backdrop-blur-md border-l-4 border-l-coviar-borravino shadow-lg hover:shadow-2xl transition-all duration-300">
             <CardHeader>
               <CardTitle className="text-xl font-bold">¿Qué beneficios aporta?</CardTitle>
             </CardHeader>
@@ -164,7 +186,8 @@ export default function DashboardPage() {
                 </li>
               </ul>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
 
         {/* Botón Final */}
@@ -179,7 +202,9 @@ export default function DashboardPage() {
             </Link>
           </Button>
         </div>
+          </div>
+        </div>
       </div>
-    </div >
+    </div>
   )
 }

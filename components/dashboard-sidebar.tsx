@@ -122,10 +122,10 @@ export function DashboardSidebar() {
       {/* Navegación principal */}
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
-          // Para el link de Inicio (/dashboard), requerimos coincidencia exacta
+          // Para el link de Inicio (/dashboard), nunca se marca como activo
           // Para otros links (/dashboard/...), permitimos subrutas
           const isActive = item.href === "/dashboard"
-            ? pathname === "/dashboard"
+            ? false
             : pathname === item.href || pathname?.startsWith(`${item.href}/`)
 
           return (

@@ -32,32 +32,32 @@ export function NivelesSostenibilidadTable({
     }
 
     return (
-        <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-[#880D1E] to-[#6a0a17] text-white">
-                <CardTitle className="text-center text-xl">
+        <Card className="overflow-hidden border-2 border-gray-200 shadow-lg rounded-xl">
+            <CardHeader className="bg-[#880D1E] border-b border-[#6a0a17] py-5">
+                <CardTitle className="text-center text-2xl font-bold text-white tracking-wide">
                     Niveles de Sostenibilidad
                 </CardTitle>
-                <p className="text-center text-white/80 text-sm">
+                <p className="text-center text-white/70 text-sm mt-1">
                     Guía de referencia de puntuación según segmento
                 </p>
             </CardHeader>
             <CardContent className="p-0">
                 {/* Badges de niveles */}
-                <div className="flex justify-center gap-4 py-4 bg-muted/30 border-b">
+                <div className="flex justify-center gap-4 py-5 bg-gray-50/50 border-b border-gray-100">
                     <Badge
-                        className="px-4 py-2 text-sm font-medium text-white"
+                        className="px-5 py-2.5 text-sm font-semibold text-white rounded-full shadow-md hover:shadow-lg transition-shadow"
                         style={{ backgroundColor: '#84CC16' }}
                     >
                         NIVEL MÍNIMO DE SOSTENIBILIDAD
                     </Badge>
                     <Badge
-                        className="px-4 py-2 text-sm font-medium text-white"
+                        className="px-5 py-2.5 text-sm font-semibold text-white rounded-full shadow-md hover:shadow-lg transition-shadow"
                         style={{ backgroundColor: '#22C55E' }}
                     >
                         NIVEL MEDIO DE SOSTENIBILIDAD
                     </Badge>
                     <Badge
-                        className="px-4 py-2 text-sm font-medium text-white"
+                        className="px-5 py-2.5 text-sm font-semibold text-white rounded-full shadow-md hover:shadow-lg transition-shadow"
                         style={{ backgroundColor: '#15803D' }}
                     >
                         NIVEL ALTO DE SOSTENIBILIDAD
@@ -65,48 +65,48 @@ export function NivelesSostenibilidadTable({
                 </div>
 
                 {/* Tabla de rangos con Mínimo/Máximo */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-gray-300 rounded-lg">
                     <table className="w-full text-sm border-collapse">
                         <thead>
                             {/* Primera fila: headers de nivel */}
-                            <tr className="border-b">
-                                <th className="px-4 py-3 text-left font-semibold bg-muted/30" rowSpan={2}>
+                            <tr className="border-b border-gray-200">
+                                <th className="px-5 py-3.5 text-left font-bold text-gray-700 bg-gray-50" rowSpan={2}>
                                     SEGMENTO
                                 </th>
                                 <th
-                                    className="px-4 py-2 text-center font-semibold border-l"
+                                    className="px-4 py-2.5 text-center font-semibold border-l text-white"
                                     colSpan={2}
-                                    style={{ backgroundColor: '#84CC1620' }}
+                                    style={{ backgroundColor: '#84CC16' }}
                                 >
                                     Nivel mínimo de Sostenibilidad
                                 </th>
                                 <th
-                                    className="px-4 py-2 text-center font-semibold border-l"
+                                    className="px-4 py-2.5 text-center font-semibold border-l text-white"
                                     colSpan={2}
-                                    style={{ backgroundColor: '#22C55E20' }}
+                                    style={{ backgroundColor: '#22C55E' }}
                                 >
                                     Nivel medio de sostenibilidad
                                 </th>
                                 <th
-                                    className="px-4 py-2 text-center font-semibold border-l"
+                                    className="px-4 py-2.5 text-center font-semibold border-l text-white"
                                     colSpan={2}
-                                    style={{ backgroundColor: '#15803D20' }}
+                                    style={{ backgroundColor: '#15803D' }}
                                 >
                                     Nivel alto de sostenibilidad
                                 </th>
                             </tr>
                             {/* Segunda fila: Mínimo/Máximo */}
-                            <tr className="border-b text-xs">
-                                <th className="px-3 py-2 text-center border-l" style={{ backgroundColor: '#84CC1610' }}>Mínimo</th>
-                                <th className="px-3 py-2 text-center" style={{ backgroundColor: '#84CC1610' }}>Máximo</th>
-                                <th className="px-3 py-2 text-center border-l" style={{ backgroundColor: '#22C55E10' }}>Mínimo</th>
-                                <th className="px-3 py-2 text-center" style={{ backgroundColor: '#22C55E10' }}>Máximo</th>
-                                <th className="px-3 py-2 text-center border-l" style={{ backgroundColor: '#15803D10' }}>Mínimo</th>
-                                <th className="px-3 py-2 text-center" style={{ backgroundColor: '#15803D10' }}>Máximo</th>
+                            <tr className="border-b border-gray-200 text-xs uppercase tracking-wider">
+                                <th className="px-3 py-2.5 text-center border-l text-white/90" style={{ backgroundColor: '#84CC16CC' }}>Mínimo</th>
+                                <th className="px-3 py-2.5 text-center text-white/90" style={{ backgroundColor: '#84CC16CC' }}>Máximo</th>
+                                <th className="px-3 py-2.5 text-center border-l text-white/90" style={{ backgroundColor: '#22C55ECC' }}>Mínimo</th>
+                                <th className="px-3 py-2.5 text-center text-white/90" style={{ backgroundColor: '#22C55ECC' }}>Máximo</th>
+                                <th className="px-3 py-2.5 text-center border-l text-white/90" style={{ backgroundColor: '#15803DCC' }}>Mínimo</th>
+                                <th className="px-3 py-2.5 text-center text-white/90" style={{ backgroundColor: '#15803DCC' }}>Máximo</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {segmentos.map(({ key, nombre }) => {
+                            {segmentos.map(({ key, nombre }, index) => {
                                 const rangos = RANGOS_POR_SEGMENTO[key]
                                 const isCurrentSegment = key === segmentoActual
                                 const nivelActual = getNivelActual(key)
@@ -114,53 +114,53 @@ export function NivelesSostenibilidadTable({
                                 return (
                                     <tr
                                         key={key}
-                                        className={`border-b hover:bg-muted/30 transition-colors ${isCurrentSegment ? 'bg-[#880D1E]/5' : ''
+                                        className={`border-b border-gray-100 hover:bg-gray-50/80 transition-colors ${isCurrentSegment ? 'bg-[#880D1E]/5 ring-1 ring-inset ring-[#880D1E]/20' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                                             }`}
                                     >
-                                        <td className="px-4 py-3 font-medium italic text-blue-700">
+                                        <td className="px-5 py-3.5 font-medium italic text-[#880D1E]">
                                             {nombre}
                                             {isCurrentSegment && (
-                                                <Badge variant="outline" className="ml-2 text-xs">
+                                                <Badge className="ml-2 text-xs bg-[#880D1E] text-white hover:bg-[#6a0a17]">
                                                     Tu segmento
                                                 </Badge>
                                             )}
                                         </td>
-                                        {/* Nivel Mínimo */}
+                                        {/* Nivel Mínimo - #84CC16 */}
                                         <td
-                                            className={`px-3 py-3 text-center border-l ${nivelActual === 'minimo' ? 'bg-lime-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center border-l font-medium ${nivelActual === 'minimo' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'minimo' ? '#84CC1650' : '#84CC1625', borderColor: '#84CC1660', color: '#3f6212' }}
                                         >
                                             {rangos.minimo.min}
                                         </td>
                                         <td
-                                            className={`px-3 py-3 text-center ${nivelActual === 'minimo' ? 'bg-lime-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center font-medium ${nivelActual === 'minimo' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'minimo' ? '#84CC1650' : '#84CC1625', color: '#3f6212' }}
                                         >
                                             {rangos.minimo.max}
                                         </td>
-                                        {/* Nivel Medio */}
+                                        {/* Nivel Medio - #22C55E */}
                                         <td
-                                            className={`px-3 py-3 text-center border-l ${nivelActual === 'medio' ? 'bg-green-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center border-l font-medium ${nivelActual === 'medio' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'medio' ? '#22C55E50' : '#22C55E25', borderColor: '#22C55E60', color: '#14532d' }}
                                         >
                                             {rangos.medio.min}
                                         </td>
                                         <td
-                                            className={`px-3 py-3 text-center ${nivelActual === 'medio' ? 'bg-green-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center font-medium ${nivelActual === 'medio' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'medio' ? '#22C55E50' : '#22C55E25', color: '#14532d' }}
                                         >
                                             {rangos.medio.max}
                                         </td>
-                                        {/* Nivel Alto */}
+                                        {/* Nivel Alto - #15803D */}
                                         <td
-                                            className={`px-3 py-3 text-center border-l ${nivelActual === 'alto' ? 'bg-emerald-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center border-l font-medium ${nivelActual === 'alto' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'alto' ? '#15803D50' : '#15803D25', borderColor: '#15803D60', color: '#052e16' }}
                                         >
                                             {rangos.alto.min}
                                         </td>
                                         <td
-                                            className={`px-3 py-3 text-center ${nivelActual === 'alto' ? 'bg-emerald-200 font-bold' : ''
-                                                }`}
+                                            className={`px-3 py-3.5 text-center font-medium ${nivelActual === 'alto' ? 'font-bold' : ''}`}
+                                            style={{ backgroundColor: nivelActual === 'alto' ? '#15803D50' : '#15803D25', color: '#052e16' }}
                                         >
                                             {rangos.alto.max}
                                         </td>

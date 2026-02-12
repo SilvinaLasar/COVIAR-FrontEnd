@@ -435,10 +435,15 @@ export default function AutoevaluacionPage() {
       if (currentIndex < estructura.length - 1) {
         setCurrentCapitulo(estructura[currentIndex + 1])
         window.scrollTo(0, 0)
+        // Scroll en el contenedor main del dashboard layout
+        const mainEl = document.querySelector('main')
+        if (mainEl) mainEl.scrollTop = 0
       }
     } else if (direction === 'prev' && currentIndex > 0) {
       setCurrentCapitulo(estructura[currentIndex - 1])
       window.scrollTo(0, 0)
+      const mainEl = document.querySelector('main')
+      if (mainEl) mainEl.scrollTop = 0
     }
   }
 
