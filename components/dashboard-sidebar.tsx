@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, ClipboardList, History, Settings, LogOut, User } from "lucide-react"
+import { Home, ClipboardList, History, Settings, LogOut, User, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -41,8 +41,10 @@ interface Usuario {
 
 const navigation = [
   { name: "Inicio", href: "/dashboard", icon: Home },
+  { name: "Manual de usuario", href: "/dashboard/manual-usuario", icon: User },
   { name: "Autoevaluación", href: "/dashboard/autoevaluacion", icon: ClipboardList },
   { name: "Historial", href: "/dashboard/historial", icon: History },
+  { name: "Resultados", href: "/dashboard/resultados", icon: BarChart3 },
 ]
 
 const bottomNavigation = [{ name: "Configuración", href: "/dashboard/configuracion", icon: Settings }]
@@ -84,8 +86,14 @@ export function DashboardSidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       {/* Header con logo */}
-      <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-primary">
-        <h1 className="text-xl font-bold text-primary-foreground">COVIAR</h1>
+      <div className="flex h-auto min-h-[120px] w-full items-center justify-center border-b border-sidebar-border bg-black py-4 px-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/assets/logos/logoclarovert.png"
+          alt="Coviar - Corporación Vitivinícola Argentina"
+          className="w-full h-auto object-contain"
+          style={{ maxWidth: "200px" }}
+        />
       </div>
 
       {/* Sección de usuario */}
@@ -115,7 +123,12 @@ export function DashboardSidebar() {
       {/* Navegación principal */}
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
+          // Para el link de Inicio (/dashboard), nunca se marca como activo
+          // Para otros links (/dashboard/...), permitimos subrutas
+          const isActive = item.href === "/dashboard"
+            ? false
+            : pathname === item.href || pathname?.startsWith(`${item.href}/`)
+
           return (
             <Link
               key={item.name}

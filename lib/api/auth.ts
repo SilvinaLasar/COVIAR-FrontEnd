@@ -1,9 +1,7 @@
 // lib/api/auth.ts
 
-import { api } from './client'
 import type {
   LoginRequest,
-  LoginResponse,
   RegistroRequest,
   RegistroResponse,
   Usuario,
@@ -48,9 +46,9 @@ export async function registrarBodega(data: RegistroRequest): Promise<RegistroRe
 /**
  * Inicia sesión con email y contraseña
  * Usa el proxy de Next.js para evitar problemas de CORS
- * POST /api/auth/login -> proxy -> http://localhost:8080/api/v1/auth/login
+ * POST /api/auth/login -> proxy -> http://localhost:8080/api/login
  */
-export async function loginUsuario(data: LoginRequest): Promise<Usuario> {
+export async function loginUsuario(data: LoginRequest): Promise<unknown> {
   try {
     // Usar el proxy de Next.js para evitar CORS
     const response = await fetch('/api/auth/login', {
@@ -64,39 +62,24 @@ export async function loginUsuario(data: LoginRequest): Promise<Usuario> {
     const result = await response.json()
 
     if (!response.ok) {
-      throw new Error(result.message || `Error ${response.status}: ${response.statusText}`)
+      throw new Error(result.message || result.error || `Error ${response.status}: ${response.statusText}`)
     }
 
-    let usuario: Usuario
+    // El backend devuelve: { data: { cuenta, bodega, responsable } }
+    // Extraer el objeto data que contiene toda la información del usuario
+    const userData = result.data || result
 
-    // Verificar si la respuesta tiene el formato { usuario, token } o es directamente el Usuario
-    if ('usuario' in result) {
-      // Formato: { usuario: Usuario, token?: string }
-      usuario = result.usuario
-      if (result.token) {
-        localStorage.setItem('token', result.token)
-      }
-    } else if ('data' in result && result.data) {
-      // Formato ApiResponse: { data: Usuario | { usuario, token } }
-      if ('usuario' in result.data) {
-        usuario = result.data.usuario
-        if (result.data.token) {
-          localStorage.setItem('token', result.data.token)
-        }
-      } else {
-        usuario = result.data as Usuario
-      }
-    } else {
-      // Formato directo: Usuario
-      usuario = result as Usuario
+    console.log('Login exitoso, datos recibidos:', userData)
+
+    // Guardar en localStorage
+    localStorage.setItem('usuario', JSON.stringify(userData))
+
+    // Guardar tipoCuenta por separado para validación de admin
+    if (userData.tipo) {
+      localStorage.setItem('tipoCuenta', userData.tipo)
     }
 
-    console.log('Usuario logueado:', usuario)
-
-    // Guardar usuario en localStorage
-    localStorage.setItem('usuario', JSON.stringify(usuario))
-
-    return usuario
+    return userData
   } catch (error) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       throw new Error('No se pudo conectar con el servidor')
@@ -125,6 +108,15 @@ export async function logoutUsuario(): Promise<void> {
     // Siempre limpiar datos de localStorage, incluso si falla el backend
     localStorage.removeItem('usuario')
     localStorage.removeItem('token')
+    localStorage.removeItem('tipoCuenta')
+
+    // Limpiar caches de historial
+    const keys = Object.keys(localStorage)
+    for (const key of keys) {
+      if (key.startsWith('historial_') || key.startsWith('resultados_')) {
+        localStorage.removeItem(key)
+      }
+    }
   }
 }
 
@@ -153,19 +145,42 @@ export function isAuthenticated(): boolean {
 
 /**
  * Solicita restablecimiento de contraseña
+ * Usa el proxy de Next.js para evitar problemas de CORS
  */
 export async function solicitarRestablecimientoPassword(email: string): Promise<void> {
-  await api.post('/api/usuarios/recuperar-password', { email })
+  const response = await fetch('/api/auth/recuperar-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || `Error ${response.status}: ${response.statusText}`)
+  }
 }
 
 /**
  * Restablece la contraseña con un token
+ * Usa el proxy de Next.js para evitar problemas de CORS
  */
 export async function restablecerPassword(token: string, nuevaPassword: string): Promise<void> {
-  await api.post('/api/usuarios/restablecer-password', {
-    token,
-    nuevaPassword,
+  const response = await fetch('/api/auth/restablecer-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, newPassword: nuevaPassword }),
   })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    throw new Error(result.message || `Error ${response.status}: ${response.statusText}`)
+  }
 }
 
 /**
