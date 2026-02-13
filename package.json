@@ -5,6 +5,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "dev:clean": "npm run clean && npm run dev",
+    "clean": "node -e \"const fs = require('fs'); const path = '.next'; if (fs.existsSync(path)) fs.rmSync(path, { recursive: true, force: true });\"",
+    "clean:all": "node -e \"const fs = require('fs'); ['.next', 'node_modules/.cache'].forEach(p => { if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true }); });\"",
     "lint": "eslint .",
     "start": "next start"
   },
