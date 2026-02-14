@@ -16,7 +16,6 @@ import {
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -486,26 +485,36 @@ function LocalChapterCard({ capitulo, idAutoevaluacion }: { capitulo: CapituloLo
                     <DialogTitle className="text-2xl font-bold text-center text-black">
                         Descargar Evidencia
                     </DialogTitle>
-                    
-                    <DialogDescription className="text-center space-y-3">
-                        <div className="text-base text-black font-medium">
-                            Se descargará la evidencia en formato PDF del siguiente indicador:
-                        </div>
-                        
-                        {pendingDownload && (
-                            <div className="p-4 bg-gradient-to-br from-[#B89B5E]/10 to-[#880D1E]/5 rounded-lg border-2 border-[#B89B5E]/50 shadow-sm">
-                                <p className="text-sm font-semibold text-black flex items-center gap-2 justify-center">
-                                    <Award className="h-4 w-4 text-[#880D1E]" />
-                                    {pendingDownload.nombreIndicador}
-                                </p>
-                            </div>
-                        )}
-                        
-                        <div className="pt-2 text-sm text-black">
-                            La descarga comenzará automáticamente al confirmar
-                        </div>
-                    </DialogDescription>
                 </DialogHeader>
+                
+                {/* 
+                    IMPORTANTE: No usar DialogDescription aquí
+                    
+                    DialogDescription se renderiza como un elemento <p> (párrafo) en HTML.
+                    Según las reglas de HTML, un <p> NO puede contener elementos de bloque como <div>.
+                    Esto causa errores de hidratación en React/Next.js.
+                    
+                    Solución: Usar un <div> directamente con elementos <p> internos para textos.
+                    Estructura válida: div > p (texto) + div (tarjeta) + p (texto)
+                */}
+                <div className="text-center space-y-3 py-4">
+                    <p className="text-base text-black font-medium">
+                        Se descargará la evidencia en formato PDF del siguiente indicador:
+                    </p>
+                    
+                    {pendingDownload && (
+                        <div className="p-4 bg-gradient-to-br from-[#B89B5E]/10 to-[#880D1E]/5 rounded-lg border-2 border-[#B89B5E]/50 shadow-sm">
+                            <p className="text-sm font-semibold text-black flex items-center gap-2 justify-center">
+                                <Award className="h-4 w-4 text-[#880D1E]" />
+                                {pendingDownload.nombreIndicador}
+                            </p>
+                        </div>
+                    )}
+                    
+                    <p className="pt-2 text-sm text-black">
+                        La descarga comenzará automáticamente al confirmar
+                    </p>
+                </div>
 
                 <DialogFooter className="gap-2 sm:gap-0 pt-4">
                     <Button
