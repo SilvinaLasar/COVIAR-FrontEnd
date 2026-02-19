@@ -19,7 +19,6 @@ export interface EvaluacionListItem {
   nombre_bodega: string
   razon_social: string
   estado: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA'
-  porcentaje: number | null
   fecha_inicio: string
   fecha_fin: string | null
   responsable: string
