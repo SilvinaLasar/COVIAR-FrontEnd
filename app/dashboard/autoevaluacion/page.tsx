@@ -489,8 +489,26 @@ export default function AutoevaluacionPage() {
     const idRespuestaAnterior = respuestaIds[idIndicador]
     const tieneEvidencia = evidencias[idIndicador]
     
-    // Si la respuesta está cambiando (es diferente) y hay evidencia asociada, eliminarla
-    if (respuestaAnterior !== undefined && respuestaAnterior !== newNivelId && idRespuestaAnterior && tieneEvidencia) {
+    // CASO 1: Si está cambiando a "Mínimo no alcanzado" (puntos = 0) y tiene evidencia, eliminarla
+    // (No se puede tener evidencia si no se alcanza el mínimo)
+    if (newLevel === 0 && idRespuestaAnterior && tieneEvidencia) {
+      console.log(`🗑️ Eliminando evidencia al cambiar a "Mínimo no alcanzado" (indicador ${idIndicador})`)
+      try {
+        await eliminarEvidencia(assessmentId, idRespuestaAnterior)
+        // Limpiar el estado de evidencias para este indicador
+        setEvidencias(prev => {
+          const updated = { ...prev }
+          delete updated[idIndicador]
+          return updated
+        })
+        console.log(`✅ Evidencia eliminada exitosamente`)
+      } catch (error) {
+        console.error('❌ Error al eliminar evidencia:', error)
+        // Continuar con el cambio de respuesta aunque falle la eliminación
+      }
+    }
+    // CASO 2: Si la respuesta está cambiando (es diferente) y hay evidencia asociada, eliminarla
+    else if (respuestaAnterior !== undefined && respuestaAnterior !== newNivelId && idRespuestaAnterior && tieneEvidencia) {
       console.log(`🗑️ Eliminando evidencia anterior del indicador ${idIndicador} (respuesta ${idRespuestaAnterior})`)
       try {
         await eliminarEvidencia(assessmentId, idRespuestaAnterior)
@@ -969,8 +987,8 @@ export default function AutoevaluacionPage() {
                       ))}
                     </RadioGroup>
 
-                    {/* Botón de carga de evidencia PDF - solo visible si hay respuesta seleccionada */}
-                    {assessmentId && savedValue !== undefined && (
+                    {/* Botón de carga de evidencia PDF - solo visible si hay respuesta seleccionada Y no es "Mínimo no alcanzado" (puntos > 0) */}
+                    {assessmentId && savedValue !== undefined && savedValue > 0 && (
                       <EvidenciaUpload
                         idAutoevaluacion={assessmentId}
                         idIndicador={indicadorWrapper.indicador.id_indicador}
