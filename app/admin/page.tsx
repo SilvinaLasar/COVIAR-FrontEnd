@@ -6,7 +6,7 @@ import { Building2, FileCheck, AlertCircle } from "lucide-react"
 import { getAdminStats, type AdminStats } from "@/lib/api/admin"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 
 // ─── Colores por nivel ─────────────────────────────────────────────────────────
 
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
                           <Cell key={i} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip content={<CustomTooltip />} />
+                      
                     </PieChart>
                   </ResponsiveContainer>
 
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
                             <Cell key={i} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip />} />
+                        
                       </PieChart>
                     </ResponsiveContainer>
 
