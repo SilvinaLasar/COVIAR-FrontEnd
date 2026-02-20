@@ -504,10 +504,10 @@ export function EvidenciaUpload({
                     </DialogHeader>
                     
                     {nombreArchivo && (
-                        <div className="py-3 px-4 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                        <div className="py-3 px-4 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 overflow-hidden">
                             <div className="flex items-center gap-2">
                                 <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 overflow-hidden">
                                     <p className="text-sm font-medium text-red-700 dark:text-red-300 truncate" title={nombreArchivo}>
                                         {nombreArchivo}
                                     </p>
