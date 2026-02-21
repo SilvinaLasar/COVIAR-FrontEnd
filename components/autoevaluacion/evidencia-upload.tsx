@@ -386,16 +386,6 @@ export function EvidenciaUpload({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={handleClickUpload}
-                            className="h-7 px-2 text-muted-foreground hover:text-primary"
-                            title="Reemplazar archivo"
-                        >
-                            <Upload className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
                             onClick={handleDeleteClick}
                             disabled={isDeleting}
                             className="h-7 px-2 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"

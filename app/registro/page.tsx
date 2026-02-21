@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react"
 import Image from "next/image"
 import { registrarBodega } from "@/lib/api/auth"
 import {
@@ -480,11 +480,35 @@ export default function RegistroPage() {
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
-                      onChange={(e) => handleFieldChange("confirmPassword", e.target.value, setConfirmPassword)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        handleFieldChange("confirmPassword", value, setConfirmPassword)
+                        // Validar en tiempo real mientras escribe
+                        if (value.length > 0) {
+                          const error = validateConfirmPassword(value, password)
+                          setFieldErrors(prev => ({ ...prev, confirmPassword: error }))
+                          setTouched(prev => ({ ...prev, confirmPassword: true }))
+                        }
+                      }}
                       onBlur={() => handleBlur("confirmPassword", confirmPassword)}
                       placeholder="Repita la contrasena"
-                      className={`pr-10 h-11 ${touched.confirmPassword && fieldErrors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                      className={`pr-20 h-11 ${
+                        confirmPassword.length > 0 && confirmPassword === password 
+                          ? "border-green-500 focus-visible:ring-green-500" 
+                          : touched.confirmPassword && fieldErrors.confirmPassword 
+                            ? "border-red-500 focus-visible:ring-red-500" 
+                            : ""
+                      }`}
                     />
+                    <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                      {confirmPassword.length > 0 && (
+                        confirmPassword === password ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        )
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -493,6 +517,12 @@ export default function RegistroPage() {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {confirmPassword.length > 0 && confirmPassword === password && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Las contraseñas coinciden
+                    </p>
+                  )}
                   {touched.confirmPassword && fieldErrors.confirmPassword && (
                     <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -593,9 +623,10 @@ export default function RegistroPage() {
                   <Input
                     id="invBod"
                     value={invBod}
-                    onChange={(e) => handleFieldChange("invBod", e.target.value, setInvBod)}
+                    onChange={(e) => handleFieldChange("invBod", e.target.value.slice(0, 6), setInvBod)}
                     onBlur={() => handleBlur("invBod", invBod)}
                     placeholder="Ej: A12345"
+                    maxLength={6}
                     className={`h-11 ${getInputErrorClass("invBod")}`}
                   />
                   {renderErrorMessage("invBod")}
@@ -606,9 +637,10 @@ export default function RegistroPage() {
                   <Input
                     id="invVin"
                     value={invVin}
-                    onChange={(e) => handleFieldChange("invVin", e.target.value, setInvVin)}
+                    onChange={(e) => handleFieldChange("invVin", e.target.value.slice(0, 6), setInvVin)}
                     onBlur={() => handleBlur("invVin", invVin)}
                     placeholder="Ej: B67890"
+                    maxLength={6}
                     className={`h-11 ${getInputErrorClass("invVin")}`}
                   />
                   {renderErrorMessage("invVin")}
