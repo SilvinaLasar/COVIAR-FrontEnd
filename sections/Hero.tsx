@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Download } from 'lucide-react';
 
 const Hero = () => {
   return (
@@ -6,12 +7,12 @@ const Hero = () => {
       
       {/* FONDO: Imagen + Superposición Corporativa */}
       <div className="absolute inset-0 z-0">
-        <div className="w-full h-full bg-gray-200">
+        <div className="w-full h-full">
            {/* eslint-disable-next-line @next/next/no-img-element */}
-           <img src="/assets/header-banner.png" alt="Viñedo" className="w-full h-full object-cover" />
+           <img src="/assets/hero.jpeg" alt="Viñedo" className="w-full h-full object-cover" />
         </div>
-        {/* Degradado Borravino con opacidad para leer el texto */}
-        <div className="absolute inset-0 bg-gradient-to-r from-coviar-borravino/95 to-coviar-borravino/70 mix-blend-multiply"></div>
+        {/* Capa de color borravino con transparencia */}
+        <div className="absolute inset-0 bg-coviar-borravino/70"></div>
       </div>
 
       {/* CONTENIDO */}
@@ -34,8 +35,9 @@ const Hero = () => {
             href="/documents/Guia-Sostenibilidad-Enoturistica-Argentina.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white border border-white/40 hover:border-white px-8 py-4 rounded-md font-medium transition duration-300 hover:bg-white/10 uppercase tracking-wide text-sm"
+            className="inline-flex items-center gap-3 bg-coviar-borravino text-white border-2 border-white/30 hover:border-white px-8 py-4 rounded-lg font-medium transition duration-300 hover:bg-coviar-borravino-dark uppercase tracking-wide text-sm"
           >
+            <Download className="w-6 h-6" />
             Descargar Guia de Sostenibilidad Enoturística Argentina
           </a>
         </div>
