@@ -65,6 +65,24 @@ const CHAPTER_COLORS: Record<string, string> = {
     'Gestión Económica': '#880D1E',
 }
 
+// Puntajes máximos por segmento (límites de referencia)
+const PUNTAJE_MAXIMO_SEGMENTO: Record<string, number> = {
+    'Bodega Turística Artesanal': 51,
+    'Micro Bodega Turística': 51,
+    'micro_bodega': 51,
+    'Bodega Turística Boutique': 69,
+    'Pequeña Bodega Turística': 69,
+    'pequeña': 69,
+    'pequena_bodega': 69,
+    'Mediana Bodega Turística': 96,
+    'mediana': 96,
+    'mediana_bodega': 96,
+    'Bodega Turística': 126,
+    'bodega': 126,
+    'Gran Bodega Turística': 126,
+    'gran_bodega': 126,
+}
+
 function getChapterIcon(nombre: string) {
     return CHAPTER_ICONS[nombre] || <CheckCircle2 className="h-5 w-5" />
 }
@@ -94,118 +112,6 @@ function formatDate(dateString: string): string {
     const hours = date.getHours().toString().padStart(2, '0')
     const minutes = date.getMinutes().toString().padStart(2, '0')
     return `${day}/${month}/${year} - ${hours}:${minutes} hs`
-}
-
-// Componente de tarjeta de capítulo expandible
-function ChapterCard({ capitulo }: { capitulo: CapituloResultado }) {
-    const [isExpanded, setIsExpanded] = useState(false)
-    const color = getChapterColor(capitulo.nombre)
-    const icon = getChapterIcon(capitulo.nombre)
-
-    // Calcular puntaje total del capítulo
-    const puntajeCapitulo = capitulo.indicadores.reduce((acc, ind) => {
-        const puntos = ind.niveles_respuesta[0]?.puntos || 0
-        return acc + puntos
-    }, 0)
-
-    return (
-        <Card
-            className="overflow-hidden transition-all duration-300 hover:shadow-lg border-l-4"
-            style={{ borderLeftColor: color }}
-        >
-            <CardHeader
-                className="cursor-pointer select-none"
-                onClick={() => setIsExpanded(!isExpanded)}
-            >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${color}15` }}
-                        >
-                            <span style={{ color }}>{icon}</span>
-                        </div>
-                        <div>
-                            <CardTitle className="text-lg font-semibold">
-                                {capitulo.nombre}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground mt-0.5">
-                                {capitulo.indicadores.length} indicadores evaluados
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Badge
-                            variant="secondary"
-                            className="text-base font-bold px-3 py-1"
-                            style={{ backgroundColor: `${color}15`, color }}
-                        >
-                            {puntajeCapitulo} pts
-                        </Badge>
-                        {isExpanded ? (
-                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                        )}
-                    </div>
-                </div>
-            </CardHeader>
-
-            {isExpanded && (
-                <CardContent className="pt-0">
-                    <Separator className="mb-4" />
-                    <div className="space-y-4">
-                        {capitulo.indicadores.map((indicador, idx) => {
-                            const respuesta = indicador.niveles_respuesta[0]
-                            return (
-                                <div
-                                    key={idx}
-                                    className="p-4 rounded-lg bg-muted/30 border border-border/50"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1">
-                                            <h4 className="font-medium text-foreground">
-                                                {indicador.nombre}
-                                            </h4>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {indicador.descripcion}
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant="outline"
-                                            className="shrink-0 font-semibold"
-                                            style={{
-                                                borderColor: color,
-                                                color: color
-                                            }}
-                                        >
-                                            {respuesta?.puntos || 0} pts
-                                        </Badge>
-                                    </div>
-                                    {respuesta && (
-                                        <div className="mt-3 p-3 rounded-md bg-background border">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <CheckCircle2
-                                                    className="h-4 w-4 shrink-0"
-                                                    style={{ color }}
-                                                />
-                                                <span className="font-medium" style={{ color }}>
-                                                    {respuesta.nombre}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1 ml-6">
-                                                {respuesta.descripcion}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                </CardContent>
-            )}
-        </Card>
-    )
 }
 
 // Tipo para capítulo local guardado con indicadores (extendido)
@@ -330,7 +236,7 @@ function LocalChapterCard({ capitulo, idAutoevaluacion }: { capitulo: CapituloLo
                             className="text-sm font-medium px-2 py-1 rounded"
                             style={{ backgroundColor: `${color}10`, color }}
                         >
-                            {capitulo.porcentaje}%
+                            {Math.round(capitulo.porcentaje)}%
                         </div>
                         {hasIndicadores && (
                             <div className="flex items-center gap-2">
@@ -409,7 +315,6 @@ function LocalChapterCard({ capitulo, idAutoevaluacion }: { capitulo: CapituloLo
                                 
                                 {/* Sección de Evidencias */}
                                 <div className="mt-3">
-                                    {/* Temporal: Mostrar siempre el botón para testear el modal */}
                                     {indicador.tiene_evidencia && indicador.id_respuesta ? (
                                         <Button
                                             type="button"
@@ -427,22 +332,6 @@ function LocalChapterCard({ capitulo, idAutoevaluacion }: { capitulo: CapituloLo
                                             {downloadingIds.has(indicador.id_indicador) 
                                                 ? 'Descargando...' 
                                                 : 'Descargar Evidencia (PDF)'}
-                                        </Button>
-                                    ) : indicador.respuesta ? (
-                                        /* Botón de prueba temporal - habilitar para testear el modal */
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleOpenDownloadModal(
-                                                indicador.id_indicador, 
-                                                999, // ID temporal para prueba
-                                                indicador.nombre
-                                            )}
-                                            className="gap-2 text-sm border-dashed"
-                                        >
-                                            <Download className="h-4 w-4" />
-                                            Testear Modal de Descarga
                                         </Button>
                                     ) : (
                                         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 border border-dashed border-muted-foreground/30">
@@ -627,6 +516,7 @@ function ErrorState({ message }: { message: string }) {
 
 interface ResultadoLocal {
     assessmentId: string
+    id_bodega?: number
     puntaje_final: number
     puntaje_maximo: number
     porcentaje: number
@@ -647,20 +537,7 @@ export default function ResultadosPage() {
     useEffect(() => {
         const cargarResultados = async () => {
             try {
-                // Primero intentar cargar desde localStorage para carga rápida
-                const ultimoResultado = localStorage.getItem('ultimo_resultado_completado')
-                if (ultimoResultado) {
-                    try {
-                        const parsed = JSON.parse(ultimoResultado) as ResultadoLocal
-                        setResultadoLocal(parsed)
-                        setIsLoading(false)
-                        return
-                    } catch (e) {
-                        console.error('Error al parsear resultado local:', e)
-                    }
-                }
-
-                // Si no hay en localStorage, consultar la API
+                // Obtener información del usuario actual primero
                 const usuarioStr = localStorage.getItem('usuario')
                 if (!usuarioStr) {
                     setIsLoading(false)
@@ -674,6 +551,28 @@ export default function ResultadosPage() {
                     setIsLoading(false)
                     return
                 }
+
+                // Intentar cargar desde localStorage solo si pertenece al usuario actual
+                const ultimoResultado = localStorage.getItem('ultimo_resultado_completado')
+                if (ultimoResultado) {
+                    try {
+                        const parsed = JSON.parse(ultimoResultado) as ResultadoLocal & { id_bodega?: number }
+                        // Verificar que el resultado pertenece a la bodega del usuario actual
+                        if (parsed.id_bodega && parsed.id_bodega === idBodega) {
+                            setResultadoLocal(parsed)
+                            setIsLoading(false)
+                            return
+                        } else {
+                            // Resultado de otra bodega/usuario, limpiar y consultar API
+                            localStorage.removeItem('ultimo_resultado_completado')
+                        }
+                    } catch (e) {
+                        console.error('Error al parsear resultado local:', e)
+                        localStorage.removeItem('ultimo_resultado_completado')
+                    }
+                }
+
+                // Consultar la API
 
                 // Obtener historial de evaluaciones completadas
                 const historial = await obtenerHistorialAutoevaluaciones(idBodega)
@@ -701,6 +600,7 @@ export default function ResultadosPage() {
                 // Formatear respuesta de API a formato ResultadoLocal
                 const resultadoFormateado: ResultadoLocal = {
                     assessmentId: ultimaEvaluacion.id_autoevaluacion.toString(),
+                    id_bodega: idBodega,
                     puntaje_final: ultimaEvaluacion.puntaje_final || 0,
                     puntaje_maximo: ultimaEvaluacion.puntaje_maximo || 0,
                     porcentaje: ultimaEvaluacion.porcentaje || 0,
@@ -754,6 +654,7 @@ export default function ResultadosPage() {
                 }
 
                 setResultadoLocal(resultadoFormateado)
+
             } catch (err) {
                 console.error('Error al cargar resultados:', err)
                 setError(err instanceof Error ? err.message : 'Error desconocido al cargar resultados')
