@@ -13,7 +13,7 @@ const Navbar = () => {
     { name: 'Inicio', href: '#inicio' },
     { name: '¿Para qué sirve?', href: '#introduccion' },
     { name: 'Proceso', href: '#proceso' },
-    { name: 'Mejora continua', href: '#mejora-continua' },
+    { name: 'Dimensiones', href: '#dimensiones' },
   ];
 
   return (

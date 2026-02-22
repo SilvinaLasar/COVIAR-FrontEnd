@@ -5,12 +5,15 @@ const Footer = () => {
         
         {/* Logos / Respaldos */}
         <div className="border-b border-gray-700 pb-12 mb-12 text-center">
-            <p className="text-gray-400 uppercase tracking-widest text-xs mb-6">Con el respaldo técnico e institucional de</p>
-            <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
-                {/* Aquí irían los logos en blanco/gris. Uso texto por ahora */}
-                <h3 className="text-2xl font-serif font-bold">COVIAR</h3>
-                <h3 className="text-xl font-sans">UNCuyo</h3>
-                <h3 className="text-xl font-sans">Ente Mendoza Turismo</h3>
+            <p className="text-gray-400 uppercase tracking-widest text-xs mb-8">Con el respaldo técnico e institucional de</p>
+            <div className="flex flex-wrap justify-center items-center">
+                {/* Logo COVIAR */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src="/assets/footer/FooterBlanco.svg" 
+                  alt="COVIAR" 
+                  className="w-full h-auto opacity-90 hover:opacity-100 transition-opacity"
+                />
             </div>
         </div>
 
