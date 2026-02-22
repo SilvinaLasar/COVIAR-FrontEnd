@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import Autoplay from "embla-carousel-autoplay"
 import Image from "next/image"
 
@@ -11,35 +10,49 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
-import { Card, CardContent } from "@/components/ui/card"
 
 export default function Gallery() {
-  const plugin = React.useRef(
-    Autoplay({ delay: 4000, stopOnInteraction: false })
-  )
-
-  // Array of images - using placeholders or assuming files will be there
-  // Since the user just created the folder, I'll list some filenames that they should fill
-  
-  // Note: For this to work, the user needs to add images to public/assets/landing-carousel/
-  // named slide1.jpg, slide2.jpg, etc. or I can use dynamic generation if I had a server component traversing files.
-  // For static content, we usually define a list.
+  // Array de todas las imágenes del carousel
   const images = [
     {
-      src: "/assets/landing-carousel/DSC0372.jpg",
-      alt: "Imagen de viñedo 1",
+      src: "/assets/landing-carousel/bodega-vista.jpg",
+      alt: "Vista panorámica de la bodega",
     },
     {
-      src: "/assets/landing-carousel/DSC0269.jpg",
-      alt: "Imagen de bodega 1",
+      src: "/assets/landing-carousel/experiencia-enoturistica.jpeg",
+      alt: "Experiencia enoturística argentina",
     },
     {
-      src: "/assets/landing-carousel/DSC0545.jpg",
-      alt: "Proceso de producción",
+      src: "/assets/landing-carousel/jornadas-cachi-01.jpeg",
+      alt: "Jornadas del vino en Cachi",
     },
     {
-      src: "/assets/landing-carousel/DSC0182.jpg",
-      alt: "Sostenibilidad en acción",
+      src: "/assets/landing-carousel/jornadas-cachi-02.jpeg",
+      alt: "Paisaje vitivinícola de Cachi",
+    },
+    {
+      src: "/assets/landing-carousel/vinedos-atardecer.jpg",
+      alt: "Viñedos argentinos al atardecer",
+    },
+    {
+      src: "/assets/landing-carousel/bodega-panoramica.jpg",
+      alt: "Bodega y viñedos panorámica",
+    },
+    {
+      src: "/assets/landing-carousel/terroir-argentino.jpg",
+      alt: "Terroir vitivinícola argentino",
+    },
+    {
+      src: "/assets/landing-carousel/sostenibilidad-enoturismo.jpg",
+      alt: "Sostenibilidad en el enoturismo",
+    },
+    {
+      src: "/assets/landing-carousel/vinedos-montanas.jpeg",
+      alt: "Viñedos y montañas",
+    },
+    {
+      src: "/assets/landing-carousel/paisaje-enoturistico.jpeg",
+      alt: "Paisaje enoturístico",
     },
   ]
 
@@ -48,17 +61,19 @@ export default function Gallery() {
       <div className="w-full">
         <div className="flex justify-center w-full">
           <Carousel
-            plugins={[plugin.current]}
+            plugins={[
+              Autoplay({ delay: 4000, stopOnInteraction: false }) as any
+            ]}
             className="w-full"
             opts={{
               loop: true,
               align: "start",
             }}
           >
-            <CarouselContent className="-ml-0">
+            <CarouselContent className="ml-0">
               {images.map((img, index) => (
                 <CarouselItem key={index} className="pl-0 basis-full">
-                  <div className="relative w-full h-[500px] md:h-[600px] lg:h-[700px]">
+                  <div className="relative w-full h-125 md:h-150 lg:h-175">
                     <div className="w-full h-full relative bg-gray-200 flex items-center justify-center">
                       <Image
                         src={img.src}
